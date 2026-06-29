@@ -292,7 +292,7 @@ async function runQA() {
       fs.mkdirSync(publicDir, { recursive: true });
     }
 
-    const baseUrl = "https://universal-tools.com";
+    const baseUrl = "https://universal-tools-platform.pages.dev";
     const tools = getAllTools().filter(t => t.sitemapInclusion);
 
     // 1. Generate Sitemap
