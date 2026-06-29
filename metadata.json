@@ -1,0 +1,8 @@
+{
+  "name": "Unit Converter",
+  "description": "The fastest, smartest, and most user-friendly Unit Converter with natural language processing, real-world context, conversion tables, and offline support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

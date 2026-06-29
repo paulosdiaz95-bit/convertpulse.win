@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand-50: #f0fbf4;
+  --color-brand-100: #ddf7e6;
+  --color-brand-200: #bdf0cd;
+  --color-brand-300: #8be4a5;
+  --color-brand-400: #51ce73;
+  --color-brand-500: #2abb51;
+  --color-brand-600: #1c9a3e;
+  --color-brand-700: #1a7a35;
+  --color-brand-800: #1a612e;
+  --color-brand-900: #175028;
+  --color-brand-950: #0b2d14;
+}
+
+/* Custom Scrollbars and Transitions for premium UX */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #1c9a3e;
+}
