@@ -1,1 +1,9 @@
-/*    /index.html   200
+# Serve sitemap correctly (must be first)
+ /sitemap.xml  /sitemap.xml  200
+ /robots.txt   /robots.txt   200
+
+# Optional: if you also have other static files
+ /assets/*     /assets/*     200
+
+# SPA fallback (React routing)
+ /*            /index.html   200
