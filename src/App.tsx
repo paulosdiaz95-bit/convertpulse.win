@@ -260,4 +260,4 @@ export default function App() {
     const cat = UNIT_CATEGORIES.find(c => c.id === catId);
     if (cat) {
       setActiveCustomTool(null);
-      setActiveCategory(catId
+      setActiveCategory(catId);
