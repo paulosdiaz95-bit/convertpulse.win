@@ -150,8 +150,9 @@ function BmiCalculator() {
         {unitSystem === "metric" ? (
           <>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Weight (kg)</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1" htmlFor="weight-kg">Weight (kg)</label>
               <input
+                id="weight-kg"
                 type="number"
                 value={weightKg}
                 onChange={(e) => setWeightKg(e.target.value)}
@@ -160,8 +161,9 @@ function BmiCalculator() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Height (cm)</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1" htmlFor="height-cm">Height (cm)</label>
               <input
+                id="height-cm"
                 type="number"
                 value={heightCm}
                 onChange={(e) => setHeightCm(e.target.value)}
@@ -173,8 +175,9 @@ function BmiCalculator() {
         ) : (
           <>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Weight (lbs)</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1" htmlFor="weight-lbs">Weight (lbs)</label>
               <input
+                id="weight-lbs"
                 type="number"
                 value={weightLbs}
                 onChange={(e) => setWeightLbs(e.target.value)}
@@ -184,8 +187,9 @@ function BmiCalculator() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Height (ft)</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1" htmlFor="height-ft">Height (ft)</label>
                 <input
+                  id="height-ft"
                   type="number"
                   value={heightFt}
                   onChange={(e) => setHeightFt(e.target.value)}
@@ -194,8 +198,9 @@ function BmiCalculator() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Height (in)</label>
+                <label className="block text-xs font-medium text-slate-500 mb-1" htmlFor="height-in">Height (in)</label>
                 <input
+                  id="height-in"
                   type="number"
                   value={heightIn}
                   onChange={(e) => setHeightIn(e.target.value)}
