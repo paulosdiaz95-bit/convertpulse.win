@@ -11,8 +11,8 @@ import FavoritesPanel from "./components/FavoritesPanel";
 import { StickyBottomAd } from "./components/AdPlacements";
 import { motion, AnimatePresence } from "motion/react";
 
-// Interactive custom productivity, finance, health, and developer tools
-import { lazy } from "react";
+// Lazy-loaded tools
+import { lazy, Suspense } from "react";
 
 const PercentageCalculator = lazy(() => import("./components/PercentageCalculator"));
 const BmiCalculator = lazy(() => import("./components/BmiCalculator"));
@@ -20,7 +20,6 @@ const LoanCalculator = lazy(() => import("./components/LoanCalculator"));
 const PasswordGenerator = lazy(() => import("./components/PasswordGenerator"));
 const JsonFormatter = lazy(() => import("./components/JsonFormatter"));
 const CaseConverter = lazy(() => import("./components/CaseConverter"));
-
 export default function App() {
   // Theme state
   const [darkMode, setDarkMode] = useState(() => {
