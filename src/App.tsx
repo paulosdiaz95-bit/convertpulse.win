@@ -12,7 +12,7 @@ import { StickyBottomAd } from "./components/AdPlacements";
 import { motion, AnimatePresence } from "motion/react";
 
 // Lazy-loaded tools
-import { lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 const PercentageCalculator = lazy(() => import("./components/PercentageCalculator"));
 const BmiCalculator = lazy(() => import("./components/BmiCalculator"));
