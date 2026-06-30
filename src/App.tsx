@@ -1,19 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, lazy } from "react";
 import * as Icons from "lucide-react";
 import { UNIT_CATEGORIES } from "./unitsData";
-import { parseClientSearch, getConversionResult, formatValue } from "./unitsEngine";
-import { ConversionResult, HistoryItem, FavoriteItem, SearchIntent } from "./types";
-import { getToolBySlug, getAllTools } from "./toolRegistry";
-import { generateSEOData } from "./seoEngine";
-import ResultDetails from "./components/ResultDetails";
-import HistoryPanel from "./components/HistoryPanel";
-import FavoritesPanel from "./components/FavoritesPanel";
+import { getConversionResult } from "./unitsEngine";
+import { HistoryItem, FavoriteItem } from "./types";
 import { StickyBottomAd } from "./components/AdPlacements";
-import { motion, AnimatePresence } from "motion/react";
 
-// Interactive custom productivity, finance, health, and developer tools
-import { lazy } from "react";
-
+// Lazy tools
 const PercentageCalculator = lazy(() => import("./components/PercentageCalculator"));
 const BmiCalculator = lazy(() => import("./components/BmiCalculator"));
 const LoanCalculator = lazy(() => import("./components/LoanCalculator"));
@@ -22,130 +14,73 @@ const JsonFormatter = lazy(() => import("./components/JsonFormatter"));
 const CaseConverter = lazy(() => import("./components/CaseConverter"));
 
 export default function App() {
-  // Theme state
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("theme") === "dark" ||
-        (!localStorage.getItem("theme") &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      );
-    }
-    return false;
-  });
+  const [darkMode, setDarkMode] = useState(false);
 
-  // Main UI Conversion States
   const [activeCategory, setActiveCategory] = useState("length");
   const [fromUnitId, setFromUnitId] = useState("m");
   const [toUnitId, setToUnitId] = useState("inch");
-  const [inputValue, setInputValue] = useState<number>(1);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiError, setAiError] = useState("");
+  const [inputValue, setInputValue] = useState(1);
 
-  // Active tool
   const [activeCustomTool, setActiveCustomTool] = useState<string | null>(null);
-
-  // History / Favorites
-  const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem("converter_history");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [favorites, setFavorites] = useState<FavoriteItem[]>(() => {
-    const saved = localStorage.getItem("converter_favorites");
-    return saved ? JSON.parse(saved) : [];
-  });
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Dark mode sync
+  // Dark mode
   useEffect(() => {
     const root = document.documentElement;
-    if (darkMode) {
-      root.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      root.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
+    if (darkMode) root.classList.add("dark");
+    else root.classList.remove("dark");
   }, [darkMode]);
 
-  // Persist history
+  // URL routing (SAFE VERSION)
   useEffect(() => {
-    localStorage.setItem("converter_history", JSON.stringify(history));
-  }, [history]);
+    const path = window.location.pathname;
+    const segments = path.split("/").filter(Boolean);
 
-  // Persist favorites
-  useEffect(() => {
-    localStorage.setItem("converter_favorites", JSON.stringify(favorites));
-  }, [favorites]);
+    if (segments.length === 1) {
+      const tools = [
+        "percentage-calculator",
+        "bmi-calculator",
+        "loan-calculator",
+        "password-generator",
+        "json-formatter",
+        "case-converter",
+      ];
 
-  // URL routing
-  useEffect(() => {
-    const parseUrlRoute = () => {
-      const path = window.location.pathname;
-      if (!path || path === "/") {
+      if (tools.includes(segments[0])) {
+        setActiveCustomTool(segments[0]);
+      }
+      return;
+    }
+
+    if (segments.length === 2) {
+      const cat = UNIT_CATEGORIES.find((c) => c.id === segments[0]);
+      if (!cat) return;
+
+      const [from, to] = segments[1].split("-to-");
+      const fromU = cat.units.find((u) => u.id === from);
+      const toU = cat.units.find((u) => u.id === to);
+
+      if (fromU && toU) {
         setActiveCustomTool(null);
-        return;
+        setActiveCategory(cat.id);
+        setFromUnitId(fromU.id);
+        setToUnitId(toU.id);
       }
-
-      const segments = path.split("/").filter(Boolean);
-
-      if (segments.length === 1) {
-        const toolId = segments[0];
-        const customTools = [
-          "percentage-calculator",
-          "bmi-calculator",
-          "loan-calculator",
-          "password-generator",
-          "json-formatter",
-          "case-converter",
-        ];
-        if (customTools.includes(toolId)) {
-          setActiveCustomTool(toolId);
-        }
-        return;
-      }
-
-      if (segments.length === 2) {
-        const categoryId = segments[0];
-        const unitPair = segments[1];
-        const parts = unitPair.split("-to-");
-
-        if (parts.length === 2) {
-          const cat = UNIT_CATEGORIES.find((c) => c.id === categoryId);
-          if (cat) {
-            const fromU = cat.units.find((u) => u.id === parts[0]);
-            const toU = cat.units.find((u) => u.id === parts[1]);
-
-            if (fromU && toU) {
-              setActiveCustomTool(null);
-              setActiveCategory(categoryId);
-              setFromUnitId(fromU.id);
-              setToUnitId(toU.id);
-            }
-          }
-        }
-      }
-    };
-
-    parseUrlRoute();
-    window.addEventListener("popstate", parseUrlRoute);
-    return () => window.removeEventListener("popstate", parseUrlRoute);
+    }
   }, []);
 
-  const updateUrlRoute = (catId: string, fromId: string, toId: string, value: number) => {
-    const path = `/${catId}/${fromId}-to-${toId}${value !== 1 ? `?v=${value}` : ""}`;
+  const updateUrl = (cat: string, from: string, to: string, value: number) => {
+    const path = `/${cat}/${from}-to-${to}${value !== 1 ? `?v=${value}` : ""}`;
     window.history.pushState({}, "", path);
   };
 
-  const handleSelectCategory = (catId: string) => {
-    const cat = UNIT_CATEGORIES.find((c) => c.id === catId);
+  const handleCategory = (id: string) => {
+    const cat = UNIT_CATEGORIES.find((c) => c.id === id);
     if (!cat) return;
 
     setActiveCustomTool(null);
-    setActiveCategory(catId);
+    setActiveCategory(id);
 
     const from = cat.units[0].id;
     const to = cat.units[1]?.id || cat.units[0].id;
@@ -153,30 +88,109 @@ export default function App() {
     setFromUnitId(from);
     setToUnitId(to);
 
-    updateUrlRoute(catId, from, to, inputValue);
+    updateUrl(id, from, to, inputValue);
   };
 
-  const handleSelectCustomTool = (toolId: string) => {
-    setActiveCustomTool(toolId);
-    window.history.pushState({}, "", `/${toolId}`);
+  const handleTool = (id: string) => {
+    setActiveCustomTool(id);
+    window.history.pushState({}, "", `/${id}`);
   };
 
-  const conversionResult = getConversionResult(
+  const handleSwap = () => {
+    const f = fromUnitId;
+    const t = toUnitId;
+
+    setFromUnitId(t);
+    setToUnitId(f);
+
+    updateUrl(activeCategory, t, f, inputValue);
+  };
+
+  const result = getConversionResult(
     activeCategory,
     fromUnitId,
     toUnitId,
     inputValue
   );
 
-  const activeCategoryObj =
+  const category =
     UNIT_CATEGORIES.find((c) => c.id === activeCategory) || UNIT_CATEGORIES[0];
 
   return (
-    <div className={`min-h-screen ${darkMode ? "dark" : ""}`}>
-      {/* UI remains unchanged below (already correct in your file) */}
-      <div className="p-4 text-sm">
-        App Loaded Successfully — Build Fix Applied
+    <div className={`min-h-screen ${darkMode ? "dark" : ""} bg-white text-black`}>
+      
+      {/* HEADER */}
+      <div className="p-4 border-b flex justify-between">
+        <h1 className="font-bold">Universal Tools Platform</h1>
+
+        <button onClick={() => setDarkMode(!darkMode)}>
+          Toggle Theme
+        </button>
       </div>
+
+      {/* SIMPLE UI (SAFE TEST VERSION) */}
+      <div className="p-6 space-y-4">
+
+        <h2 className="font-bold text-lg">
+          {activeCustomTool
+            ? activeCustomTool
+            : `${category.name} Converter`}
+        </h2>
+
+        {!activeCustomTool && (
+          <>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={inputValue}
+                onChange={(e) => setInputValue(Number(e.target.value))}
+                className="border p-2"
+              />
+
+              <select
+                value={fromUnitId}
+                onChange={(e) => setFromUnitId(e.target.value)}
+              >
+                {category.units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+
+              <button onClick={handleSwap}>Swap</button>
+
+              <select
+                value={toUnitId}
+                onChange={(e) => setToUnitId(e.target.value)}
+              >
+                {category.units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="p-3 border rounded">
+              Result: {result?.value}
+            </div>
+          </>
+        )}
+
+        {activeCustomTool === "percentage-calculator" && (
+          <PercentageCalculator />
+        )}
+        {activeCustomTool === "bmi-calculator" && <BmiCalculator />}
+        {activeCustomTool === "loan-calculator" && <LoanCalculator />}
+        {activeCustomTool === "password-generator" && (
+          <PasswordGenerator />
+        )}
+        {activeCustomTool === "json-formatter" && <JsonFormatter />}
+        {activeCustomTool === "case-converter" && <CaseConverter />}
+      </div>
+
+      {/* ADS */}
       <StickyBottomAd />
     </div>
   );
