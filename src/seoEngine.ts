@@ -264,11 +264,19 @@ export function generateSEOData(
       "@type": schemaType,
       "name": rawTitle,
       "description": description,
+      "url": canonicalUrl,
+      "inLanguage": "en",
       "applicationCategory": "Utility",
       "operatingSystem": "All",
       "browserRequirements": "Requires HTML5/JavaScript",
       "keywords": keywords.join(", "),
-      ...(tool.formula ? { "educationalLevel": "Intermediate", "assesses": tool.formula } : {})
+      "usageInfo": "Enter your values, choose the required options, and the calculator updates instantly in your browser without sending your data to a server.",
+      ...(tool.formula
+        ? {
+            "educationalLevel": "Intermediate",
+            "assesses": tool.formula
+          }
+        : {})
     });
   }
 
