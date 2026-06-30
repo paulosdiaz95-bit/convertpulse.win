@@ -1,4 +1,4 @@
- import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as Icons from "lucide-react";
 import { UNIT_CATEGORIES } from "./unitsData";
 import { parseClientSearch, getConversionResult, formatValue } from "./unitsEngine";
