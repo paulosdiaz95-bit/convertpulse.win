@@ -12,12 +12,14 @@ import { StickyBottomAd } from "./components/AdPlacements";
 import { motion, AnimatePresence } from "motion/react";
 
 // Interactive custom productivity, finance, health, and developer tools
-import PercentageCalculator from "./components/PercentageCalculator";
-import BmiCalculator from "./components/BmiCalculator";
-import LoanCalculator from "./components/LoanCalculator";
-import PasswordGenerator from "./components/PasswordGenerator";
-import JsonFormatter from "./components/JsonFormatter";
-import CaseConverter from "./components/CaseConverter";
+import { lazy } from "react";
+
+const PercentageCalculator = lazy(() => import("./components/PercentageCalculator"));
+const BmiCalculator = lazy(() => import("./components/BmiCalculator"));
+const LoanCalculator = lazy(() => import("./components/LoanCalculator"));
+const PasswordGenerator = lazy(() => import("./components/PasswordGenerator"));
+const JsonFormatter = lazy(() => import("./components/JsonFormatter"));
+const CaseConverter = lazy(() => import("./components/CaseConverter"));
 
 export default function App() {
   // Theme state
