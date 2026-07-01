@@ -141,7 +141,7 @@ export default function App() {
         const catObj = UNIT_CATEGORIES.find(c => c.id === activeCategory);
         toolObj = {
           id: activeCategory,
-          slug: `?cat=${activeCategory}`,
+          slug: activeCategory,
           title: `${catObj?.name || "Unit"} Conversion Calculator`,
           category: "unit-converters",
           categoryLabel: `${catObj?.name || "Unit"} Converters`,
@@ -335,14 +335,14 @@ export default function App() {
     ? getToolBySlug(activeCustomTool)
     : (getToolBySlug(`${activeCategory}/${fromUnitId}-to-${toUnitId}`) || {
         id: activeCategory,
-        slug: `?cat=${activeCategory}`,
+        slug: activeCategory,
         title: `${activeCategoryObj.name} Conversion Calculator`,
         category: "unit-converters" as const,
         categoryLabel: `${activeCategoryObj.name} Converters`,
         description: `Convert ${activeCategoryObj.name} units dynamically.`,
         breadcrumbs: [
           { label: "Home", url: "/" },
-          { label: activeCategoryObj.name, url: `/?cat=${activeCategory}` }
+          { label: activeCategoryObj.name, url: `/${activeCategory}` }
         ]
       });
 
@@ -506,11 +506,16 @@ export default function App() {
                           setActiveCustomTool(firstTool.id);
                           window.history.pushState({}, "", `/${firstTool.slug}`);
                         }
-                      } else if (crumb.url.includes("?cat=")) {
-                        const cat = crumb.url.split("?cat=")[1];
-                        setActiveCustomTool(null);
-                        setActiveCategory(cat);
-                        window.history.pushState({}, "", "/");
+                      } else if (UNIT_CATEGORIES.find(c => c.id === crumb.url.replace(/^\//, ""))) {
+                        const category = crumb.url.replace(/^\//, "");
+                        const catObj = UNIT_CATEGORIES.find(c => c.id === category);
+                        if (catObj) {
+                          setActiveCustomTool(null);
+                          setActiveCategory(category);
+                          setFromUnitId(catObj.units[0].id);
+                          setToUnitId(catObj.units[1]?.id || catObj.units[0].id);
+                          window.history.pushState({}, "", `/${category}`);
+                        }
                       } else {
                         const cleanedSlug = crumb.url.replace(/^\//, "");
                         const tool = getToolBySlug(cleanedSlug);
