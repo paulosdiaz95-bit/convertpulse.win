@@ -255,8 +255,8 @@ export default function App() {
               <Icons.RefreshCw className="w-4 h-4 animate-spin-slow" />
             </div>
             <div>
-              <strong className="text-sm font-bold tracking-tight text-slate-800 dark:text-slate-100 block">Universal Converter</strong>
-              <span className="text-[10px] font-medium text-slate-400 font-mono">WORLD'S BEST CONVERSION CORE</span>
+              <strong className="text-sm font-bold tracking-tight text-slate-800 dark:text-slate-100 block">ConvertPulse</strong>
+              <span className="text-[10px] font-medium text-slate-400 font-mono">Simple, Fast, Powerful Tools</span>
             </div>
           </div>
 
@@ -639,7 +639,7 @@ export default function App() {
                 <span>Related Calculators & Tools</span>
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                Explore more high-precision {activeCategoryObj?.name || "universal"} tools and conversion resources:
+                Explore more high-precision {activeCategoryObj?.name || "all"} tools and conversion resources:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
                 {seoData.relatedTools.map((relTool) => (
@@ -728,7 +728,7 @@ export default function App() {
       <footer className="border-t border-slate-200/55 dark:border-slate-800/60 bg-white dark:bg-slate-950 py-12 mt-16 text-slate-400">
         <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Universal Converter</h4>
+            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">ConvertPulse</h4>
             <p className="text-[11px] mt-2 leading-relaxed text-slate-400">
               The premier resource for scientific, financial, physical, and custom dimensional measurement standardizations. Built with speed, offline compliance, and user safety in mind.
             </p>
@@ -747,7 +747,7 @@ export default function App() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 border-t border-slate-200/40 dark:border-slate-800/40 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px]">
-          <div>&copy; 2026 Universal Unit Converter. All Rights Reserved.</div>
+          <div>&copy; 2026 ConvertPulse. All Rights Reserved.</div>
           <div className="flex gap-4">
             <span className="cursor-pointer hover:underline">Privacy Policy</span>
             <span className="cursor-pointer hover:underline">Terms of Service</span>
