@@ -1,209 +1,97 @@
+import { useEffect } from "react";
 import { UNIT_CATEGORIES } from "./unitsData";
-import type { ToolRegistryItem, ToolCategory } from "./toolRegistry";
+import { getToolBySlug, getAllTools } from "./toolRegistry";
+import { generateSEOData } from "./seoEngine";
 
-export interface SEOMetadata {
-  title: string;
-  description: string;
-  keywords: string[];
-  canonicalUrl: string;
-  openGraph: {
-    title: string;
-    description: string;
-    url: string;
-    type: string;
-    image: string;
-    siteName: string;
-  };
-  twitter: {
-    card: string;
-    title: string;
-    description: string;
-    image: string;
-  };
-  breadcrumbs: { label: string; url: string }[];
-  relatedTools: { id: string; title: string; slug: string; category: string }[];
-  jsonLd: any[];
-}
-
-/* =========================
-CATEGORY TEMPLATES
-========================= */
-const CATEGORY_TEMPLATES: Record<ToolCategory, any> = {
-  "unit-converters": {
-    titleTemplate: (t: string) => `${t} | Accurate Online Unit Converter`,
-    descTemplate: (t: string) => `Convert units instantly using our high-precision ${t}.`,
-    keywordsTemplate: (t: string) => [t.toLowerCase(), "unit converter"],
-    defaultIntroduction: (t: string) => `Welcome to ${t}.`,
-    defaultExplanation: (t: string) => `Standard unit conversion logic.`,
-    defaultFaqs: () => [],
-    defaultTips: [],
-    defaultMistakes: []
-  },
-  calculators: {
-    titleTemplate: (t: string) => `${t} | Free Calculator`,
-    descTemplate: (t: string) => `Solve ${t} instantly online.`,
-    keywordsTemplate: (t: string) => [t.toLowerCase(), "calculator"],
-    defaultIntroduction: (t: string) => `${t} calculator tool.`,
-    defaultExplanation: (t: string) => `Mathematical computation engine.`,
-    defaultFaqs: () => [],
-    defaultTips: [],
-    defaultMistakes: []
-  },
-  finance: {
-    titleTemplate: (t: string) => `${t} | Finance Tool`,
-    descTemplate: (t: string) => `Calculate ${t} easily.`,
-    keywordsTemplate: (t: string) => [t.toLowerCase(), "finance"],
-    defaultIntroduction: (t: string) => `${t} finance tool.`,
-    defaultExplanation: (t: string) => `Financial formulas applied.`,
-    defaultFaqs: () => [],
-    defaultTips: [],
-    defaultMistakes: []
-  },
-  health: {
-    titleTemplate: (t: string) => `${t} | Health Calculator`,
-    descTemplate: (t: string) => `Check ${t} instantly.`,
-    keywordsTemplate: (t: string) => [t.toLowerCase(), "health"],
-    defaultIntroduction: (t: string) => `${t} health tool.`,
-    defaultExplanation: (t: string) => `Health metrics calculation.`,
-    defaultFaqs: () => [],
-    defaultTips: [],
-    defaultMistakes: []
-  },
-  "developer-tools": {
-    titleTemplate: (t: string) => `${t} | Dev Tool`,
-    descTemplate: (t: string) => `${t} for developers.`,
-    keywordsTemplate: (t: string) => [t.toLowerCase(), "dev tools"],
-    defaultIntroduction: (t: string) => `${t} developer tool.`,
-    defaultExplanation: (t: string) => `Code processing utility.`,
-    defaultFaqs: () => [],
-    defaultTips: [],
-    defaultMistakes: []
-  },
-  "text-utilities": {
-    titleTemplate: (t: string) => `${t} | Text Tool`,
-    descTemplate: (t: string) => `${t} text utility.`,
-    keywordsTemplate: (t: string) => [t.toLowerCase(), "text"],
-    defaultIntroduction: (t: string) => `${t} text tool.`,
-    defaultExplanation: (t: string) => `Text transformation.`,
-    defaultFaqs: () => [],
-    defaultTips: [],
-    defaultMistakes: []
-  }
-};
-
-/* =========================
-SEO GENERATOR
-========================= */
-export function generateSEOData(
-  tool: Partial<ToolRegistryItem> & { id: string; title: string; category: ToolCategory },
-  allTools?: any[],
-  inputValue?: number
-): SEOMetadata {
-  const hostUrl =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : "https://universal-tools-platform.pages.dev";
-  const slug = tool.slug || tool.id;
-  const canonicalUrl = `${hostUrl}/${slug}`;
-  const template = CATEGORY_TEMPLATES[tool.category];
-  
-  const title = template.titleTemplate(tool.title);
-  const description = tool.description || template.descTemplate(tool.title);
-  const keywords = tool.keywords?.length ? tool.keywords : template.keywordsTemplate(tool.title);
-  
-  const schemaType =
-    tool.schemaType === "MathSolver"
-      ? "SoftwareApplication"
-      : tool.schemaType || "WebApplication";
+export function useSEO(
+  activeCategory: string,
+  fromUnitId: string,
+  toUnitId: string,
+  activeCustomTool: string | null,
+  inputValue: number
+) {
+  useEffect(() => {
+    let toolObj: any = null;
+    
+    if (activeCustomTool) {
+      toolObj = getToolBySlug(activeCustomTool);
+    } else {
+      const slug = `${activeCategory}/${fromUnitId}-to-${toUnitId}`;
+      toolObj = getToolBySlug(slug);
       
-  const jsonLd: any[] = [
-    {
-      "@context": "https://schema.org",
-      "@type": schemaType,
-      name: tool.title,
-      description,
-      url: canonicalUrl,
-      inLanguage: "en",
-      applicationCategory: "Utility",
-      operatingSystem: "All",
-      browserRequirements: "Requires HTML5/JavaScript",
-      keywords: keywords.join(", "),
-      usageInfo: "This tool runs locally in your browser and does not store user data."
+      if (!toolObj) {
+        const catObj = UNIT_CATEGORIES.find(c => c.id === activeCategory);
+        toolObj = {
+          id: activeCategory,
+          slug: `?cat=${activeCategory}`,
+          title: `${catObj?.name || "Unit"} Conversion Calculator`,
+          category: "unit-converters",
+          categoryLabel: `${catObj?.name || "Unit"} Converters`,
+          description: `Convert ${catObj?.name || "unit"} units seamlessly. Includes formulas, live step-by-step math explanations, and interactive reference tables.`,
+          sitemapInclusion: false
+        };
+      }
     }
-  ];
 
-  if (tool.formula) {
-    jsonLd[0].assesses = tool.formula;
-  }
+    if (!toolObj) return;
 
-  jsonLd.push({
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: (tool.breadcrumbs || []).map((b, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name: b.label,
-      item: `${hostUrl}${b.url}`
-    }))
-  });
+    const seo = generateSEOData(toolObj, getAllTools(), inputValue);
+    
+    // 1. Update Title
+    document.title = seo.title;
 
-  return {
-    title,
-    description,
-    keywords,
-    canonicalUrl,
-    openGraph: {
-      title,
-      description,
-      url: canonicalUrl,
-      type: "website",
-      image: `${hostUrl}/assets/banner.png`,
-      siteName: "Universal Tools Platform"
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      image: `${hostUrl}/assets/banner.png`
-    },
-    breadcrumbs: tool.breadcrumbs || [],
-    relatedTools: [],
-    jsonLd
-  };
-}
+    // 2. Helper to set meta tags
+    const setMetaTag = (selector: string, attribute: string, value: string) => {
+      let element = document.head.querySelector(selector);
+      if (!element) {
+        const matches = selector.match(/meta\[(name|property)="([^"]+)"/);
+        if (matches) {
+          element = document.createElement("meta");
+          element.setAttribute(matches[1], matches[2]);
+          document.head.appendChild(element);
+        }
+      }
+      if (element) {
+        element.setAttribute(attribute, value);
+      }
+    };
 
-/* =========================
-FIXED EXPORT
-========================= */
-export function enrichToolRegistryItem(
-  tool: Partial<ToolRegistryItem> & { id: string; title: string; category: ToolCategory }
-): ToolRegistryItem {
-  const template = CATEGORY_TEMPLATES[tool.category];
-  const slug = tool.slug || tool.id;
-  
-  return {
-    id: tool.id,
-    slug,
-    title: tool.title,
-    category: tool.category,
-    categoryLabel: tool.categoryLabel || tool.category,
-    description: tool.description || template.descTemplate(tool.title),
-    keywords: tool.keywords || template.keywordsTemplate(tool.title),
-    schemaType: tool.schemaType || "WebApplication",
-    formula: tool.formula,
-    sitemapInclusion: tool.sitemapInclusion ?? true,
-    breadcrumbs:
-      tool.breadcrumbs || [
-        { label: "Home", url: "/" },
-        { label: tool.title, url: `/${slug}` }
-      ],
-    relatedToolIds: tool.relatedToolIds || [],
-    reusableContent: tool.reusableContent || {
-      introduction: template.defaultIntroduction(tool.title),
-      explanation: template.defaultExplanation(tool.title),
-      faq: template.defaultFaqs(tool.title),
-      tips: template.defaultTips,
-      commonMistakes: template.defaultMistakes
+    // 3. Helper to set canonical link
+    const setCanonicalLink = (url: string) => {
+      let element = document.head.querySelector("link[rel='canonical']");
+      if (!element) {
+        element = document.createElement("link");
+        element.setAttribute("rel", "canonical");
+        document.head.appendChild(element);
+      }
+      element.setAttribute("href", url);
+    };
+
+    setMetaTag('meta[name="description"]', 'content', seo.description);
+    setCanonicalLink(seo.canonicalUrl);
+
+    // Open Graph
+    setMetaTag('meta[property="og:title"]', 'content', seo.openGraph.title);
+    setMetaTag('meta[property="og:description"]', 'content', seo.openGraph.description);
+    setMetaTag('meta[property="og:url"]', 'content', seo.openGraph.url);
+    setMetaTag('meta[property="og:type"]', 'content', seo.openGraph.type);
+    setMetaTag('meta[property="og:image"]', 'content', seo.openGraph.image);
+
+    // Twitter Card
+    setMetaTag('meta[name="twitter:card"]', 'content', seo.twitter.card);
+    setMetaTag('meta[name="twitter:title"]', 'content', seo.twitter.title);
+    setMetaTag('meta[name="twitter:description"]', 'content', seo.twitter.description);
+    setMetaTag('meta[name="twitter:image"]', 'content', seo.twitter.image);
+
+    // 4. Update JSON-LD Script tag
+    let ldScript = document.getElementById("jsonld-schema") as HTMLScriptElement;
+    if (!ldScript) {
+      ldScript = document.createElement("script");
+      ldScript.id = "jsonld-schema";
+      ldScript.type = "application/ld+json";
+      document.head.appendChild(ldScript);
     }
-  };
+    ldScript.text = JSON.stringify(seo.jsonLd, null, 2);
+    
+  }, [activeCategory, fromUnitId, toUnitId, activeCustomTool, inputValue]);
 }
