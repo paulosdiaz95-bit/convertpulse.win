@@ -337,43 +337,29 @@ export default function App() {
   };
 
   // Natural Language Search Handling
-const handleSearchSubmit = (e?: React.FormEvent) => {
+  const handleSearchSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
 
     setIsAiLoading(true);
+    setAiError("");
 
     const lowerQuery = searchQuery.trim().toLowerCase();
-    
-    // Check for custom tools
-    if (lowerQuery.includes("bmi")) { handleSelectCustomTool("bmi-calculator"); }
-    else if (lowerQuery.includes("percent")) { handleSelectCustomTool("percentage-calculator"); }
-    else if (lowerQuery.includes("loan") || lowerQuery.includes("finance")) { handleSelectCustomTool("loan-calculator"); }
-    else if (lowerQuery.includes("password")) { handleSelectCustomTool("password-generator"); }
-    else if (lowerQuery.includes("json")) { handleSelectCustomTool("json-formatter"); }
-    else if (lowerQuery.includes("case")) { handleSelectCustomTool("case-converter"); }
-    
-    // Perform local parsing
-    const clientIntent = parseClientSearch(searchQuery);
-    
-    if (clientIntent.categoryId && clientIntent.fromUnitId && clientIntent.toUnitId) {
-      setActiveCustomTool(null);
-      setActiveCategory(clientIntent.categoryId);
-      setFromUnitId(clientIntent.fromUnitId);
-      setToUnitId(clientIntent.toUnitId);
-      
-      if (clientIntent.value !== undefined) {
-        setInputValue(clientIntent.value);
-        updateUrlRoute(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, clientIntent.value);
-        addHistoryItem(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, clientIntent.value);
-      }
-    } else {
-      // Simple alert instead of an error message
-      alert("I couldn't find that conversion. Please try something like '10kg to lbs' or '5 feet to cm'.");
+
+    // Check for custom tools first
+    if (lowerQuery.includes("bmi")) {
+      handleSelectCustomTool("bmi-calculator");
+      setIsAiLoading(false);
+      return;
     }
-    
-    setIsAiLoading(false);
-  };
+    if (lowerQuery.includes("percent")) {
+      handleSelectCustomTool("percentage-calculator");
+      setIsAiLoading(false);
+      return;
+    }
+    if (lowerQuery.includes("loan") || lowerQuery.includes("finance")) {
+      handleSelectCustomTool("loan-calculator");
+      setIsAiLoading(false);
       return;
     }
     if (lowerQuery.includes("password") || lowerQuery.includes("key") || lowerQuery.includes("generate password") || lowerQuery.includes("entropy")) {
@@ -443,6 +429,8 @@ const handleSearchSubmit = (e?: React.FormEvent) => {
       setAiError("AI search service unavailable. Please check configuration.");
     } finally {
       setIsAiLoading(false);
+    }
+  };
 
   // Get current active conversion objects
   const activeCategoryObj = UNIT_CATEGORIES.find(c => c.id === activeCategory) || UNIT_CATEGORIES[0];
