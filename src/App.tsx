@@ -18,6 +18,7 @@ import PasswordGenerator from "./components/PasswordGenerator";
 import JsonFormatter from "./components/JsonFormatter";
 import CaseConverter from "./components/CaseConverter";
 import { useUserPreferences } from "./useUserPreferences";
+import { useSEO } from "./useSEO";
 
 export default function App() {
   // Theme state
@@ -46,6 +47,17 @@ export default function App() {
 
   // References for keyboard shortcuts
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // ========================================
+  // 🚀 SEO Hook - One line to rule them all!
+  // ========================================
+  useSEO({
+    category: activeCategory,
+    fromUnitId: fromUnitId,
+    toUnitId: toUnitId,
+    customToolId: activeCustomTool,
+    inputValue: inputValue,
+  });
 
   // Apply dark mode CSS class
   useEffect(() => {
@@ -125,96 +137,6 @@ export default function App() {
     const newPath = `/${catId}/${fromId}-to-${toId}${value !== 1 ? `?v=${value}` : ""}`;
     window.history.pushState({ path: newPath }, "", newPath);
   };
-
-  // Dynamic SEO Metadata and JSON-LD structured schema update
-  useEffect(() => {
-    let toolObj: any = null;
-    if (activeCustomTool) {
-      toolObj = getToolBySlug(activeCustomTool);
-    } else {
-      const slug = `${activeCategory}/${fromUnitId}-to-${toUnitId}`;
-      toolObj = getToolBySlug(slug);
-
-      if (!toolObj) {
-        // Fallback for custom activeCategory when no exact pairwise tool exists yet
-        const catObj = UNIT_CATEGORIES.find(c => c.id === activeCategory);
-        toolObj = {
-          id: activeCategory,
-          slug: `?cat=${activeCategory}`,
-          title: `${catObj?.name || "Unit"} Conversion Calculator`,
-          category: "unit-converters",
-          categoryLabel: `${catObj?.name || "Unit"} Converters`,
-          description: `Convert ${catObj?.name || "unit"} units seamlessly. Includes formulas, live step-by-step math explanations, and interactive reference tables.`,
-          sitemapInclusion: false
-        };
-      }
-    }
-
-    if (!toolObj) return;
-
-    // Generate comprehensive SEO dataset using our configuration-driven engine
-    const seo = generateSEOData(toolObj, getAllTools(), inputValue);
-
-    // 1. Update Title
-    document.title = seo.title;
-
-    // 2. Helper to set meta tags
-    const setMetaTag = (selector: string, attribute: string, value: string) => {
-      let element = document.head.querySelector(selector);
-      if (!element) {
-        const matches = selector.match(/meta\[(name|property)="([^"]+)"/);
-        if (matches) {
-          element = document.createElement("meta");
-          if (matches[1] === "name") {
-            element.setAttribute("name", matches[2]);
-          } else {
-            element.setAttribute("property", matches[2]);
-          }
-          document.head.appendChild(element);
-        }
-      }
-      if (element) {
-        element.setAttribute(attribute, value);
-      }
-    };
-
-    // 3. Helper to set canonical link
-    const setCanonicalLink = (url: string) => {
-      let element = document.head.querySelector("link[rel='canonical']");
-      if (!element) {
-        element = document.createElement("link");
-        element.setAttribute("rel", "canonical");
-        document.head.appendChild(element);
-      }
-      element.setAttribute("href", url);
-    };
-
-    setMetaTag('meta[name="description"]', 'content', seo.description);
-    setCanonicalLink(seo.canonicalUrl);
-
-    // Open Graph
-    setMetaTag('meta[property="og:title"]', 'content', seo.openGraph.title);
-    setMetaTag('meta[property="og:description"]', 'content', seo.openGraph.description);
-    setMetaTag('meta[property="og:url"]', 'content', seo.openGraph.url);
-    setMetaTag('meta[property="og:type"]', 'content', seo.openGraph.type);
-    setMetaTag('meta[property="og:image"]', 'content', seo.openGraph.image);
-
-    // Twitter Card
-    setMetaTag('meta[name="twitter:card"]', 'content', seo.twitter.card);
-    setMetaTag('meta[name="twitter:title"]', 'content', seo.twitter.title);
-    setMetaTag('meta[name="twitter:description"]', 'content', seo.twitter.description);
-    setMetaTag('meta[name="twitter:image"]', 'content', seo.twitter.image);
-
-    // 4. Update JSON-LD Script tag containing both breadcrumb path and entity schemas
-    let ldScript = document.getElementById("jsonld-schema") as HTMLScriptElement;
-    if (!ldScript) {
-      ldScript = document.createElement("script");
-      ldScript.id = "jsonld-schema";
-      ldScript.type = "application/ld+json";
-      document.head.appendChild(ldScript);
-    }
-    ldScript.text = JSON.stringify(seo.jsonLd, null, 2);
-  }, [activeCategory, fromUnitId, toUnitId, activeCustomTool, inputValue]);
 
   // Keyboard shortcut for Command+K or Search key focus
   useEffect(() => {
@@ -673,226 +595,4 @@ export default function App() {
             <>
               {/* Interactive Calculator Block */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Calculator Config
-                  </span>
-                  <span className="text-xs font-semibold text-brand-600 dark:text-brand-400 font-mono">
-                    {activeCategoryObj.name}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  
-                  {/* From Block */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                      From Unit
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={fromUnitId}
-                        onChange={(e) => handleSelectFromUnit(e.target.value)}
-                        className="w-full appearance-none bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-sm font-semibold text-slate-800 dark:text-slate-100 px-3 py-2.5 rounded-lg focus:outline-hidden cursor-pointer"
-                      >
-                        {activeCategoryObj.units.map(unit => (
-                          <option key={unit.id} value={unit.id}>
-                            {unit.name} ({unit.symbol})
-                          </option>
-                        ))}
-                      </select>
-                      <Icons.ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
-                    </div>
-                  
-                    <input
-                      type="number"
-                      value={inputValue}
-                      onChange={(e) => handleValueChange(parseFloat(e.target.value) || 0)}
-                      placeholder="Enter numeric value..."
-                      className="w-full mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-sm font-semibold pl-3 pr-3 py-2.5 rounded-lg focus:outline-hidden focus:border-brand-600 dark:focus:border-brand-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
-                    />
-                  </div>
-
-                  {/* To Block */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                      To Unit
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={toUnitId}
-                        onChange={(e) => handleSelectToUnit(e.target.value)}
-                        className="w-full appearance-none bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-sm font-semibold text-slate-800 dark:text-slate-100 px-3 py-2.5 rounded-lg focus:outline-hidden cursor-pointer"
-                      >
-                        {activeCategoryObj.units.map(unit => (
-                          <option key={unit.id} value={unit.id}>
-                            {unit.name} ({unit.symbol})
-                          </option>
-                        ))}
-                      </select>
-                      <Icons.ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              {/* 3. conversion details cards container */}
-              {conversionResult && (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`${fromUnitId}-${toUnitId}-${inputValue}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <ResultDetails
-                      result={conversionResult}
-                      onSwap={handleSwap}
-                      onSelectUnitPair={(fromId, toId) => {
-                        setFromUnitId(fromId);
-                        setToUnitId(toId);
-                        updateUrlRoute(activeCategory, fromId, toId, inputValue);
-                        addHistoryItem(activeCategory, fromId, toId, inputValue);
-                      }}
-                      favorites={favorites}
-                      onToggleFavorite={handleToggleFavorite} 
-                    />
-                  </motion.div>
-                </AnimatePresence>
-              )}
-            </>
-          )}
-
-          {/* Dynamically Generated Internal Links / Related Tools */}
-          {seoData && seoData.relatedTools && seoData.relatedTools.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-xs">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                <Icons.Link2 className="w-4 h-4 text-brand-600 dark:text-brand-500" />
-                <span>Related Calculators & Tools</span>
-              </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                Explore more high-precision {activeCategoryObj?.name || "universal"} tools and conversion resources:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-                {seoData.relatedTools.map((relTool) => (
-                  <a
-                    key={relTool.id}
-                    href={`/${relTool.slug}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const tool = getToolBySlug(relTool.slug);
-                      if (tool) {
-                        if (tool.category === "unit-converters") {
-                          setActiveCustomTool(null);
-                          const pathParts = tool.id.split("-to-");
-                          if (pathParts.length === 2) {
-                            const category = tool.slug.split("/")[0];
-                            setActiveCategory(category);
-                            setFromUnitId(pathParts[0]);
-                            setToUnitId(pathParts[1]);
-                          }
-                        } else {
-                          setActiveCustomTool(tool.id);
-                        }
-                        window.history.pushState({}, "", `/${relTool.slug}`);
-                      }
-                    }}
-                    className="flex flex-col justify-between p-3.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200/65 dark:border-slate-800/65 rounded-xl hover:border-brand-500 hover:shadow-xs group transition-all text-left"
-                  >
-                    <div>
-                      <span className="text-[9px] font-bold text-brand-600 dark:text-brand-500 uppercase tracking-wider block">
-                        {relTool.category.replace("-", " ")}
-                      </span>
-                      <strong className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1 block group-hover:text-brand-600 dark:group-hover:text-brand-400 line-clamp-2 leading-snug">
-                        {relTool.title}
-                      </strong>
-                    </div>
-                    <span className="text-[10px] font-semibold text-slate-400 group-hover:text-brand-600 flex items-center gap-0.5 mt-3 transition-colors">
-                      <span>Launch Tool</span>
-                      <Icons.ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                    </span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-        </section>
-
-        {/* Right Hand: Favorites, Recent History Panel */}
-        <aside className="lg:col-span-3 space-y-6">
-          <FavoritesPanel
-            favorites={favorites}
-            onSelect={(fav) => {
-              setActiveCategory(fav.category);
-              setFromUnitId(fav.fromUnitId);
-              setToUnitId(fav.toUnitId);
-              updateUrlRoute(fav.category, fav.fromUnitId, fav.toUnitId, inputValue);
-              addHistoryItem(fav.category, fav.fromUnitId, fav.toUnitId, inputValue);
-            }}
-            onRemove={(fav, e) => {
-              e.stopPropagation();
-              toggleFavorite(fav.category, fav.fromUnitId, fav.toUnitId);
-            }}
-          />
-
-          <HistoryPanel
-            history={history}
-            onSelect={(hist) => {
-              setActiveCategory(hist.category);
-              setFromUnitId(hist.fromUnitId);
-              setToUnitId(hist.toUnitId);
-              setInputValue(hist.value);
-              updateUrlRoute(hist.category, hist.fromUnitId, hist.toUnitId, hist.value);
-            }}
-            onClear={() => clearHistory()}
-          />
-
-          {/* Clean monetization credit display */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-xl p-4 shadow-xs text-center">
-            <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase">Secure Client Engine</span>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Your calculations are secure. No cookies, cloud storage trackers, or sign-in walls exist. Privacy first.
-            </p>
-          </div>
-        </aside>
-
-      </main>
-    
-      {/* 3. Footer Section */}
-      <footer className="border-t border-slate-200/55 dark:border-slate-800/60 bg-white dark:bg-slate-950 py-12 mt-16 text-slate-400">
-        <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Universal Converter</h4>
-            <p className="text-[11px] mt-2 leading-relaxed text-slate-400">
-              The premier resource for scientific, financial, physical, and custom dimensional measurement standardizations. Built with speed, offline compliance, and user safety in mind.
-            </p>
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Supported Standards</h4>
-            <p className="text-[11px] mt-2 leading-relaxed text-slate-400">
-              Governed by the International System of Units (SI), NIST standard reference indexes, and modern European Forex indices.
-            </p>
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Future Roadmap</h4>
-            <p className="text-[11px] mt-2 leading-relaxed text-slate-400">
-              Future releases include offline progressive web apps (PWA), OCR image scanning, voice searching, and multi-language support.
-            </p>
-          </div>
-        </div>
-        <div className="max-w-6xl mx-auto px-4 border-t border-slate-200/40 dark:border-slate-800/40 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px]">
-          <div>&copy; 2026 Universal Unit Converter. All Rights Reserved.</div>
-          <div className="flex gap-4">
-            <span className="cursor-pointer hover:underline">Privacy Policy</span>
-            <span className="cursor-pointer hover:underline">Terms of Service</span>
-            <span className="cursor-pointer hover:underline">Reference Index</span>
-          </div>
-        </div>
-      </footer>
-      <StickyBottomAd />
-    </div>
-  );
-}
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-
