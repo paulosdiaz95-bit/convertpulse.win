@@ -256,7 +256,7 @@ export default function App() {
             </div>
             <div>
               <strong className="text-sm font-bold tracking-tight text-slate-800 dark:text-slate-100 block">ConvertPulse</strong>
-              <span className="text-[10px] font-medium text-slate-400 font-mono">Simple, Fast, Powerful Tools</span>
+              <span className="text-[10px] font-medium text-slate-400 font-mono">Fast, Accurate, Simple Tools</span>
             </div>
           </div>
 
@@ -639,7 +639,7 @@ export default function App() {
                 <span>Related Calculators & Tools</span>
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                Explore more high-precision {activeCategoryObj?.name || "all"} tools and conversion resources:
+                Explore more high-precision {activeCategoryObj?.name || "universal"} tools and conversion resources:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
                 {seoData.relatedTools.map((relTool) => (
