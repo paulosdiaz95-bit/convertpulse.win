@@ -110,7 +110,7 @@ export function generateSEOData(
   const hostUrl =
     typeof window !== "undefined"
       ? window.location.origin
-      : "https://universal-tools-platform.pages.dev";
+      : "https://convertpulse.win"; // UPDATED: Changed from pages.dev URL
 
   const slug = tool.slug || tool.id;
   const canonicalUrl = `${hostUrl}/${slug}`;
@@ -149,7 +149,6 @@ export function generateSEOData(
     jsonLd[0].assesses = tool.formula;
   }
 
-  // FIXED: Properly structured BreadcrumbList with nested item objects and safety check for empty arrays
   const breadcrumbs = tool.breadcrumbs || [];
   if (breadcrumbs.length > 0) {
     jsonLd.push({
@@ -178,7 +177,7 @@ export function generateSEOData(
       url: canonicalUrl,
       type: "website",
       image: `${hostUrl}/assets/banner.png`,
-      siteName: "Universal Tools Platform"
+      siteName: "ConvertPulse" // UPDATED: Updated siteName
     },
     twitter: {
       card: "summary_large_image",
@@ -193,7 +192,7 @@ export function generateSEOData(
 }
 
 /* =========================
-   FIXED EXPORT (THIS WAS YOUR BUILD ERROR)
+   FIXED EXPORT
 ========================= */
 
 export function enrichToolRegistryItem(
