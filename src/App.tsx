@@ -4,7 +4,7 @@ import { UNIT_CATEGORIES } from "./unitsData";
 import { parseClientSearch, getConversionResult, formatValue } from "./unitsEngine";
 import { ConversionResult, HistoryItem, FavoriteItem, SearchIntent } from "./types";
 import { getToolBySlug, getAllTools } from "./toolRegistry";
-import { useSEO } from "./useSEO"; // Import the new hook
+import { generateSEOData } from "./seoEngine";
 import ResultDetails from "./components/ResultDetails";
 import HistoryPanel from "./components/HistoryPanel";
 import FavoritesPanel from "./components/FavoritesPanel";
@@ -39,7 +39,7 @@ export default function App() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
   
-  // Universal Tools Platform Active custom tool
+  // ConvertPulse Active custom tool (e.g. Percentage Calculator)
   const [activeCustomTool, setActiveCustomTool] = useState<string | null>(null);
 
   // History and Favorites managed by custom hook
@@ -60,13 +60,14 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // SEO URL routing listener
+  // SEO URL routing listener (e.g. /length/cm-to-inch or /percentage-calculator)
   useEffect(() => {
     const parseUrlRoute = () => {
       const path = window.location.pathname;
       if (path && path !== "/") {
         const segments = path.split("/").filter(Boolean);
         
+        // Single segment route (e.g. /percentage-calculator)
         if (segments.length === 1) {
           const toolId = segments[0];
           const isCustomTool = [
@@ -80,6 +81,7 @@ export default function App() {
           }
         }
         
+        // Two segment route (e.g. /length/cm-to-inch)
         if (segments.length === 2) {
           const categoryId = segments[0];
           const unitPair = segments[1];
@@ -96,6 +98,7 @@ export default function App() {
                 setFromUnitId(fromU.id);
                 setToUnitId(toU.id);
                 
+                // Read optional value from query string
                 const params = new URLSearchParams(window.location.search);
                 const queryVal = params.get("v");
                 if (queryVal) {
@@ -107,6 +110,7 @@ export default function App() {
           }
         }
       } else {
+        // Root path
         setActiveCustomTool(null);
       }
     };
@@ -116,18 +120,102 @@ export default function App() {
     return () => window.removeEventListener("popstate", parseUrlRoute);
   }, []);
 
-  // Helper to trigger URL updates
+  // Helper to trigger URL updates to keep SEO page-depth and shareability intact
   const updateUrlRoute = (catId: string, fromId: string, toId: string, value: number) => {
     const newPath = `/${catId}/${fromId}-to-${toId}${value !== 1 ? `?v=${value}` : ""}`;
     window.history.pushState({ path: newPath }, "", newPath);
   };
 
-  // ==========================================
-  // CLEAN SEO IMPLEMENTATION (ONE-LINER)
-  // ==========================================
-  const seoData = useSEO(activeCategory, fromUnitId, toUnitId, activeCustomTool, inputValue);
-  const activeBreadcrumbs = seoData ? seoData.breadcrumbs : [{ label: "Home", url: "/" }];
-  // ==========================================
+  // Dynamic SEO Metadata and JSON-LD structured schema update
+  useEffect(() => {
+    let toolObj: any = null;
+    
+    if (activeCustomTool) {
+      toolObj = getToolBySlug(activeCustomTool);
+    } else {
+      const slug = `${activeCategory}/${fromUnitId}-to-${toUnitId}`;
+      toolObj = getToolBySlug(slug);
+      
+      if (!toolObj) {
+        // Fallback for custom activeCategory when no exact pairwise tool exists yet
+        const catObj = UNIT_CATEGORIES.find(c => c.id === activeCategory);
+        toolObj = {
+          id: activeCategory,
+          slug: `?cat=${activeCategory}`,
+          title: `${catObj?.name || "Unit"} Conversion Calculator`,
+          category: "unit-converters",
+          categoryLabel: `${catObj?.name || "Unit"} Converters`,
+          description: `Convert ${catObj?.name || "unit"} units seamlessly. Includes formulas, live step-by-step math explanations, and interactive reference tables.`,
+          sitemapInclusion: false
+        };
+      }
+    }
+
+    if (!toolObj) return;
+
+    // Generate comprehensive SEO dataset using our configuration-driven engine
+    const seo = generateSEOData(toolObj, getAllTools(), inputValue);
+
+    // 1. Update Title
+    document.title = seo.title;
+
+    // 2. Helper to set meta tags
+    const setMetaTag = (selector: string, attribute: string, value: string) => {
+      let element = document.head.querySelector(selector);
+      if (!element) {
+        const matches = selector.match(/meta\[(name|property)="([^"]+)"/);
+        if (matches) {
+          element = document.createElement("meta");
+          if (matches[1] === "name") {
+            element.setAttribute("name", matches[2]);
+          } else {
+            element.setAttribute("property", matches[2]);
+          }
+          document.head.appendChild(element);
+        }
+      }
+      if (element) {
+        element.setAttribute(attribute, value);
+      }
+    };
+
+    // 3. Helper to set canonical link
+    const setCanonicalLink = (url: string) => {
+      let element = document.head.querySelector("link[rel='canonical']");
+      if (!element) {
+        element = document.createElement("link");
+        element.setAttribute("rel", "canonical");
+        document.head.appendChild(element);
+      }
+      element.setAttribute("href", url);
+    };
+
+    setMetaTag('meta[name="description"]', 'content', seo.description);
+    setCanonicalLink(seo.canonicalUrl);
+
+    // Open Graph
+    setMetaTag('meta[property="og:title"]', 'content', seo.openGraph.title);
+    setMetaTag('meta[property="og:description"]', 'content', seo.openGraph.description);
+    setMetaTag('meta[property="og:url"]', 'content', seo.openGraph.url);
+    setMetaTag('meta[property="og:type"]', 'content', seo.openGraph.type);
+    setMetaTag('meta[property="og:image"]', 'content', seo.openGraph.image);
+
+    // Twitter Card
+    setMetaTag('meta[name="twitter:card"]', 'content', seo.twitter.card);
+    setMetaTag('meta[name="twitter:title"]', 'content', seo.twitter.title);
+    setMetaTag('meta[name="twitter:description"]', 'content', seo.twitter.description);
+    setMetaTag('meta[name="twitter:image"]', 'content', seo.twitter.image);
+
+    // 4. Update JSON-LD Script tag containing both breadcrumb path and entity schemas
+    let ldScript = document.getElementById("jsonld-schema") as HTMLScriptElement;
+    if (!ldScript) {
+      ldScript = document.createElement("script");
+      ldScript.id = "jsonld-schema";
+      ldScript.type = "application/ld+json";
+      document.head.appendChild(ldScript);
+    }
+    ldScript.text = JSON.stringify(seo.jsonLd, null, 2);
+  }, [activeCategory, fromUnitId, toUnitId, activeCustomTool, inputValue]);
 
   // Keyboard shortcut for Command+K or Search key focus
   useEffect(() => {
@@ -137,6 +225,7 @@ export default function App() {
         searchInputRef.current?.focus();
       }
       if (e.key === "/") {
+        // Focus search if not inside an input
         if (document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
           e.preventDefault();
           searchInputRef.current?.focus();
@@ -240,6 +329,25 @@ export default function App() {
 
   const activeCategoryObj = UNIT_CATEGORIES.find(c => c.id === activeCategory) || UNIT_CATEGORIES[0];
   const conversionResult = getConversionResult(activeCategory, fromUnitId, toUnitId, inputValue);
+
+  // Configuration-driven SEO and Breadcrumbs selector
+  const activeToolObj = activeCustomTool
+    ? getToolBySlug(activeCustomTool)
+    : (getToolBySlug(`${activeCategory}/${fromUnitId}-to-${toUnitId}`) || {
+        id: activeCategory,
+        slug: `?cat=${activeCategory}`,
+        title: `${activeCategoryObj.name} Conversion Calculator`,
+        category: "unit-converters" as const,
+        categoryLabel: `${activeCategoryObj.name} Converters`,
+        description: `Convert ${activeCategoryObj.name} units dynamically.`,
+        breadcrumbs: [
+          { label: "Home", url: "/" },
+          { label: activeCategoryObj.name, url: `/?cat=${activeCategory}` }
+        ]
+      });
+
+  const seoData = activeToolObj ? generateSEOData(activeToolObj, getAllTools(), inputValue) : null;
+  const activeBreadcrumbs = seoData ? seoData.breadcrumbs : [{ label: "Home", url: "/" }];
 
   return (
     <div className={`min-h-screen ${darkMode ? "dark" : ""} bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300`}>
