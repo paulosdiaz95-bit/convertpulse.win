@@ -331,6 +331,19 @@ export function parseClientSearch(query: string): SearchIntent {
     };
   }
 
+  // 7. Bare unit name only, no number and no destination, e.g. "foot", "cm", "psi".
+  // Jump to that unit's category with it pre-selected as the "from" unit, defaulting
+  // the value to 1 so the user immediately sees a reference conversion.
+  const bareUnit = findUnitMatch(clean);
+  if (bareUnit) {
+    return {
+      categoryId: bareUnit.categoryId,
+      fromUnitId: bareUnit.unitId,
+      toUnitId: getOppositeDefaultUnitId(bareUnit.categoryId, bareUnit.unitId),
+      value: 1
+    };
+  }
+
   return {};
 }
 
