@@ -337,27 +337,43 @@ export default function App() {
   };
 
   // Natural Language Search Handling
-  const handleSearchSubmit = async (e?: React.FormEvent) => {
+const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
 
-    setAiError("");
     setIsAiLoading(true);
 
     const lowerQuery = searchQuery.trim().toLowerCase();
-    if (lowerQuery.includes("bmi") || lowerQuery.includes("body mass")) {
-      handleSelectCustomTool("bmi-calculator");
-      setIsAiLoading(false);
-      return;
+    
+    // Check for custom tools
+    if (lowerQuery.includes("bmi")) { handleSelectCustomTool("bmi-calculator"); }
+    else if (lowerQuery.includes("percent")) { handleSelectCustomTool("percentage-calculator"); }
+    else if (lowerQuery.includes("loan") || lowerQuery.includes("finance")) { handleSelectCustomTool("loan-calculator"); }
+    else if (lowerQuery.includes("password")) { handleSelectCustomTool("password-generator"); }
+    else if (lowerQuery.includes("json")) { handleSelectCustomTool("json-formatter"); }
+    else if (lowerQuery.includes("case")) { handleSelectCustomTool("case-converter"); }
+    
+    // Perform local parsing
+    const clientIntent = parseClientSearch(searchQuery);
+    
+    if (clientIntent.categoryId && clientIntent.fromUnitId && clientIntent.toUnitId) {
+      setActiveCustomTool(null);
+      setActiveCategory(clientIntent.categoryId);
+      setFromUnitId(clientIntent.fromUnitId);
+      setToUnitId(clientIntent.toUnitId);
+      
+      if (clientIntent.value !== undefined) {
+        setInputValue(clientIntent.value);
+        updateUrlRoute(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, clientIntent.value);
+        addHistoryItem(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, clientIntent.value);
+      }
+    } else {
+      // Simple alert instead of an error message
+      alert("I couldn't find that conversion. Please try something like '10kg to lbs' or '5 feet to cm'.");
     }
-    if (lowerQuery.includes("percent") || lowerQuery.includes("percentage")) {
-      handleSelectCustomTool("percentage-calculator");
-      setIsAiLoading(false);
-      return;
-    }
-    if (lowerQuery.includes("loan") || lowerQuery.includes("mortgage") || lowerQuery.includes("interest") || lowerQuery.includes("finance")) {
-      handleSelectCustomTool("loan-calculator");
-      setIsAiLoading(false);
+    
+    setIsAiLoading(false);
+  };
       return;
     }
     if (lowerQuery.includes("password") || lowerQuery.includes("key") || lowerQuery.includes("generate password") || lowerQuery.includes("entropy")) {
