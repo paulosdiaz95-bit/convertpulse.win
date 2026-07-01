@@ -35,6 +35,7 @@ export default function App() {
   const [inputValue, setInputValue] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   // Universal Tools Platform Active custom tool (e.g. Percentage Calculator)
   const [activeCustomTool, setActiveCustomTool] = useState<string | null>(null);
@@ -330,44 +331,53 @@ export default function App() {
     }
   };
 
-  // Natural Language Search Handling (Local-Only)
+  // Natural Language Search Handling (Local-Only, fully synchronous — no network calls)
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!searchQuery.trim()) return;
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return;
 
     setIsAiLoading(true);
+    setSearchError("");
 
-    const lowerQuery = searchQuery.trim().toLowerCase();
+    const lowerQuery = trimmedQuery.toLowerCase();
 
-    // Check for custom tools first (keep your existing logic here)
-    if (lowerQuery.includes("bmi")) { handleSelectCustomTool("bmi-calculator"); }
-    else if (lowerQuery.includes("percent")) { handleSelectCustomTool("percentage-calculator"); }
-    else if (lowerQuery.includes("loan") || lowerQuery.includes("finance")) { handleSelectCustomTool("loan-calculator"); }
-    else if (lowerQuery.includes("password") || lowerQuery.includes("key")) { handleSelectCustomTool("password-generator"); }
-    else if (lowerQuery.includes("json") || lowerQuery.includes("format")) { handleSelectCustomTool("json-formatter"); }
-    else if (lowerQuery.includes("case") || lowerQuery.includes("text")) { handleSelectCustomTool("case-converter"); }
-    else {
-      // 1. Perform instant local regex parsing
-      const clientIntent = parseClientSearch(searchQuery);
-      if (clientIntent.categoryId && clientIntent.fromUnitId && clientIntent.toUnitId) {
-        setActiveCustomTool(null);
-        setActiveCategory(clientIntent.categoryId);
-        setFromUnitId(clientIntent.fromUnitId);
-        setToUnitId(clientIntent.toUnitId);
-        
-        if (clientIntent.value !== undefined) {
-          setInputValue(clientIntent.value);
-          updateUrlRoute(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, clientIntent.value);
-          addHistoryItem(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, clientIntent.value);
-        } else {
-          updateUrlRoute(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, inputValue);
-          addHistoryItem(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, inputValue);
-        }
-      } else {
-        alert("I couldn't find that conversion. Try '10kg to lbs'.");
-      }
+    // 1. Check for custom tool keywords first — if matched, jump straight there and stop.
+    const toolMatch =
+      lowerQuery.includes("bmi") ? "bmi-calculator" :
+      lowerQuery.includes("percent") ? "percentage-calculator" :
+      (lowerQuery.includes("loan") || lowerQuery.includes("finance")) ? "loan-calculator" :
+      (lowerQuery.includes("password") || lowerQuery.includes("key")) ? "password-generator" :
+      (lowerQuery.includes("json") || lowerQuery.includes("format")) ? "json-formatter" :
+      (lowerQuery.includes("case") || lowerQuery.includes("text")) ? "case-converter" :
+      null;
+
+    if (toolMatch) {
+      handleSelectCustomTool(toolMatch);
+      setIsAiLoading(false);
+      return;
     }
-    
+
+    // 2. Otherwise, try to parse it as a unit conversion query locally.
+    const clientIntent = parseClientSearch(trimmedQuery);
+    if (clientIntent.categoryId && clientIntent.fromUnitId && clientIntent.toUnitId) {
+      setActiveCustomTool(null);
+      setActiveCategory(clientIntent.categoryId);
+      setFromUnitId(clientIntent.fromUnitId);
+      setToUnitId(clientIntent.toUnitId);
+
+      const resolvedValue = clientIntent.value !== undefined ? clientIntent.value : inputValue;
+      if (clientIntent.value !== undefined) {
+        setInputValue(clientIntent.value);
+      }
+      updateUrlRoute(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, resolvedValue);
+      addHistoryItem(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, resolvedValue);
+    } else {
+      // 3. No match — surface a subtle inline notice instead of a blocking alert().
+      console.warn(`Search: no conversion match found for "${trimmedQuery}"`);
+      setSearchError(`Couldn't find a match for "${trimmedQuery}". Try something like "10kg to lbs" or "5 feet to cm".`);
+    }
+
     setIsAiLoading(false);
   };
 
@@ -622,7 +632,10 @@ export default function App() {
                 type="text"
                 placeholder="Examples: 5 feet to cm, 150 lbs to kg, 250 psi to bar..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (searchError) setSearchError("");
+                }}
                 className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 pl-10 pr-24 py-3 rounded-xl text-sm focus:outline-hidden focus:border-brand-600 dark:focus:border-brand-500 text-slate-900 dark:text-slate-100 placeholder-slate-400 font-medium"
               />
               <button
@@ -643,6 +656,13 @@ export default function App() {
                 )}
               </button>
             </form>
+
+            {searchError && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-3 flex items-center gap-1.5">
+                <Icons.AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>{searchError}</span>
+              </p>
+            )}
 
             {/* Quick pre-populate tags */}
             <div className="flex flex-wrap gap-1.5 mt-3">
