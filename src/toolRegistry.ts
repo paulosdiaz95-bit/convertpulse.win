@@ -39,7 +39,7 @@ export function getUnitConverterTools(): ToolRegistryItem[] {
   const tools: ToolRegistryItem[] = [];
 
   UNIT_CATEGORIES.forEach((cat) => {
-    const majorUnits = cat.units.slice(0, 5);
+    const majorUnits = cat.units;
 
     majorUnits.forEach((fromUnit) => {
       majorUnits.forEach((toUnit) => {
@@ -72,7 +72,7 @@ export function getUnitConverterTools(): ToolRegistryItem[] {
           sitemapInclusion: true,
           breadcrumbs: [
             { label: "Home", url: "/" },
-            { label: cat.name, url: `/?cat=${cat.id}` },
+            { label: cat.name, url: `/${cat.id}` },
             { label: `${fromUnit.symbol} to ${toUnit.symbol}`, url: `/${slug}` },
           ],
           relatedToolIds: [],
@@ -109,7 +109,7 @@ export const CUSTOM_TOOLS: ToolRegistryItem[] = [
     sitemapInclusion: true,
     breadcrumbs: [
       { label: "Home", url: "/" },
-      { label: "Calculators", url: "/?type=calculators" },
+      { label: "Calculators", url: "/calculators" },
       { label: "Percentage Calculator", url: "/percentage-calculator" },
     ],
     relatedToolIds: ["bmi-calculator", "loan-calculator"],
@@ -132,7 +132,7 @@ export const CUSTOM_TOOLS: ToolRegistryItem[] = [
     sitemapInclusion: true,
     breadcrumbs: [
       { label: "Home", url: "/" },
-      { label: "Health", url: "/?type=health" },
+      { label: "Health", url: "/health" },
       { label: "BMI Calculator", url: "/bmi-calculator" },
     ],
     relatedToolIds: ["percentage-calculator", "loan-calculator"],
@@ -155,7 +155,7 @@ export const CUSTOM_TOOLS: ToolRegistryItem[] = [
     sitemapInclusion: true,
     breadcrumbs: [
       { label: "Home", url: "/" },
-      { label: "Finance", url: "/?type=finance" },
+      { label: "Finance", url: "/finance" },
       { label: "Loan Calculator", url: "/loan-calculator" },
     ],
     relatedToolIds: ["percentage-calculator", "bmi-calculator"],
@@ -177,7 +177,7 @@ export const CUSTOM_TOOLS: ToolRegistryItem[] = [
     sitemapInclusion: true,
     breadcrumbs: [
       { label: "Home", url: "/" },
-      { label: "Developer", url: "/?type=developer-tools" },
+      { label: "Developer", url: "/developer-tools" },
       { label: "Password Generator", url: "/password-generator" },
     ],
     relatedToolIds: [],
@@ -199,7 +199,7 @@ export const CUSTOM_TOOLS: ToolRegistryItem[] = [
     sitemapInclusion: true,
     breadcrumbs: [
       { label: "Home", url: "/" },
-      { label: "Developer", url: "/?type=developer-tools" },
+      { label: "Developer", url: "/developer-tools" },
       { label: "JSON Formatter", url: "/json-formatter" },
     ],
     relatedToolIds: [],
@@ -221,7 +221,7 @@ export const CUSTOM_TOOLS: ToolRegistryItem[] = [
     sitemapInclusion: true,
     breadcrumbs: [
       { label: "Home", url: "/" },
-      { label: "Text Utilities", url: "/?type=text-utilities" },
+      { label: "Text Utilities", url: "/text-utilities" },
       { label: "Case Converter", url: "/case-converter" },
     ],
     relatedToolIds: [],
