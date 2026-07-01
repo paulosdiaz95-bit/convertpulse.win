@@ -595,4 +595,133 @@ export default function App() {
             <>
               {/* Interactive Calculator Block */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    Calculator Config
+                  </span>
+                  <span className="text-xs font-semibold text-brand-600 dark:text-brand-400 font-mono">
+                    {activeCategoryObj.name}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  {/* From Block */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                      From Unit
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={fromUnitId}
+                        onChange={(e) => handleSelectFromUnit(e.target.value)}
+                        className="w-full appearance-none bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-sm font-semibold text-slate-800 dark:text-slate-100 px-3 py-2.5 rounded-lg focus:outline-hidden cursor-pointer"
+                      >
+                        {activeCategoryObj.units.map(unit => (
+                          <option key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.symbol})
+                          </option>
+                        ))}
+                      </select>
+                      <Icons.ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  
+                    <input
+                      type="number"
+                      value={inputValue}
+                      onChange={(e) => handleValueChange(parseFloat(e.target.value) || 0)}
+                      placeholder="Enter numeric value..."
+                      className="w-full mt-2 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-sm font-semibold pl-3 pr-3 py-2.5 rounded-lg focus:outline-hidden focus:border-brand-600 dark:focus:border-brand-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                    />
+                  </div>
+
+                  {/* To Block */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                      To Unit
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={toUnitId}
+                        onChange={(e) => handleSelectToUnit(e.target.value)}
+                        className="w-full appearance-none bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-sm font-semibold text-slate-800 dark:text-slate-100 px-3 py-2.5 rounded-lg focus:outline-hidden cursor-pointer"
+                      >
+                        {activeCategoryObj.units.map(unit => (
+                          <option key={unit.id} value={unit.id}>
+                            {unit.name} ({unit.symbol})
+                          </option>
+                        ))}
+                      </select>
+                      <Icons.ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* 3. conversion details cards container */}
+              {conversionResult && (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`${fromUnitId}-${toUnitId}-${inputValue}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ResultDetails
+                      result={conversionResult}
+                      onSwap={handleSwap}
+                      onSelectUnitPair={(fromId, toId) => {
+                        setFromUnitId(fromId);
+                        setToUnitId(toId);
+                        updateUrlRoute(activeCategory, fromId, toId, inputValue);
+                        addHistoryItem(activeCategory, fromId, toId, inputValue);
+                      }}
+                      favorites={favorites}
+                      onToggleFavorite={handleToggleFavorite} 
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              )}
+            </>
+          )}
+
+          {/* Dynamically Generated Internal Links / Related Tools */}
+          {seoData && seoData.relatedTools && seoData.relatedTools.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-xs">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                <Icons.Link2 className="w-4 h-4 text-brand-600 dark:text-brand-500" />
+                <span>Related Calculators & Tools</span>
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Explore more high-precision {activeCategoryObj?.name || "universal"} tools and conversion resources:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                {seoData.relatedTools.map((relTool) => (
+                  <a
+                    key={relTool.id}
+                    href={`/${relTool.slug}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const tool = getToolBySlug(relTool.slug);
+                      if (tool) {
+                        if (tool.category === "unit-converters") {
+                          setActiveCustomTool(null);
+                          const pathParts = tool.id.split("-to-");
+                          if (pathParts.length === 2) {
+                            const category = tool.slug.split("/")[0];
+                            setActiveCategory(category);
+                            setFromUnitId(pathParts[0]);
+                            setToUnitId(pathParts[1]);
+                          }
+                        } else {
+                          setActiveCustomTool(tool.id);
+                        }
+                        window.history.pushState({}, "", `/${relTool.slug}`);
+                      }
+                    }}
+                    className="flex flex-col justify-between p-3.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200/65 dark:border-slate-800/65 rounded-xl hover:border-brand-500 hover:shadow-xs group transition-all text-left"
+                  >
+                    <div>
+                      <span className="text-[9px] font-bold text-brand-600 dark:text
