@@ -443,8 +443,6 @@ const handleSearchSubmit = (e?: React.FormEvent) => {
       setAiError("AI search service unavailable. Please check configuration.");
     } finally {
       setIsAiLoading(false);
-    }
-  };
 
   // Get current active conversion objects
   const activeCategoryObj = UNIT_CATEGORIES.find(c => c.id === activeCategory) || UNIT_CATEGORIES[0];
