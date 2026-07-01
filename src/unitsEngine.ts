@@ -221,10 +221,15 @@ const SYNONYMS: { [key: string]: { categoryId: string; unitId: string } } = {
   "terabytes": { categoryId: "digital", unitId: "TB" }
 };
 
-// Normalize string helper for comparison
+// Normalize string helper for comparison (used as a resilience fallback in findUnitMatch
+// for stray punctuation / spacing typos on single-word unit symbols)
 function normalizeUnitString(str: string): string {
   return str.toLowerCase().trim().replace(/s$/, "").replace(/[^a-z0-9°"']/g, "");
 }
+
+// Character class shared by every unit-capturing group below.
+// Includes 0-9 (needed for ids like m2 / cm2 / km2) and "/" (needed for km/h, m/s).
+const UNIT_CHARS = "a-zA-Z0-9°\"'\\s²³µ/";
 
 // Client-side rule-based parser that executes under a few milliseconds
 export function parseClientSearch(query: string): SearchIntent {
@@ -232,7 +237,7 @@ export function parseClientSearch(query: string): SearchIntent {
   if (!clean) return {};
 
   // 1. Convert X [to/in] Y e.g. "Convert 15 miles to kilometers."
-  const convertRegex = /convert\s+(\d+(?:\.\d+)?)\s*([a-zA-Z°"'\s²³µ]+)\s+(?:to|into|in)\s+([a-zA-Z°"'\s²³µ]+)/i;
+  const convertRegex = new RegExp(`convert\\s+(\\d+(?:\\.\\d+)?)\\s*([${UNIT_CHARS}]+)\\s+(?:to|into|in)\\s+([${UNIT_CHARS}]+)`, "i");
   const matchConvert = clean.match(convertRegex);
   if (matchConvert) {
     const value = parseFloat(matchConvert[1]);
@@ -249,7 +254,7 @@ export function parseClientSearch(query: string): SearchIntent {
   }
 
   // 2. How many Y in X? e.g. "How many inches is 2 meters?"
-  const howManyRegex = /how\s+many\s+([a-zA-Z°"'\s²³µ]+)\s+(?:is|are|in|equal)\s+(\d+(?:\.\d+)?)\s*([a-zA-Z°"'\s²³µ]+)/i;
+  const howManyRegex = new RegExp(`how\\s+many\\s+([${UNIT_CHARS}]+)\\s+(?:is|are|in|equal)\\s+(\\d+(?:\\.\\d+)?)\\s*([${UNIT_CHARS}]+)`, "i");
   const matchHowMany = clean.match(howManyRegex);
   if (matchHowMany) {
     const toUnit = findUnitMatch(matchHowMany[1]);
@@ -265,8 +270,8 @@ export function parseClientSearch(query: string): SearchIntent {
     }
   }
 
-  // 3. X [to/in] Y e.g. "10kg to pounds", "100 cm inches", "32f to c", "100 dollars in pesos"
-  const standardRegex = /(\d+(?:\.\d+)?)\s*([a-zA-Z°"'\s²³µ]+)\s+(?:to|into|in|as)\s+([a-zA-Z°"'\s²³µ]+)/i;
+  // 3. X [to/in] Y e.g. "10kg to pounds", "100 cm inches", "32f to c"
+  const standardRegex = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*([${UNIT_CHARS}]+)\\s+(?:to|into|in|as)\\s+([${UNIT_CHARS}]+)`, "i");
   const matchStandard = clean.match(standardRegex);
   if (matchStandard) {
     const value = parseFloat(matchStandard[1]);
@@ -283,7 +288,7 @@ export function parseClientSearch(query: string): SearchIntent {
   }
 
   // 4. X Y without explicit to, e.g. "100 cm inches" or "100 mph kmh" or "5 acres m2"
-  const spaceRegex = /(\d+(?:\.\d+)?)\s*([a-zA-Z°"'\s²³µ]+)\s+([a-zA-Z°"'\s²³µ]+)/i;
+  const spaceRegex = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*([${UNIT_CHARS}]+)\\s+([${UNIT_CHARS}]+)`, "i");
   const matchSpace = clean.match(spaceRegex);
   if (matchSpace) {
     const value = parseFloat(matchSpace[1]);
@@ -300,7 +305,7 @@ export function parseClientSearch(query: string): SearchIntent {
   }
 
   // 5. Bare number with unit, e.g. "5 feet" or "10kg"
-  const bareRegex = /(\d+(?:\.\d+)?)\s*([a-zA-Z°"'\s²³µ]+)/i;
+  const bareRegex = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*([${UNIT_CHARS}]+)`, "i");
   const matchBare = clean.match(bareRegex);
   if (matchBare) {
     const value = parseFloat(matchBare[1]);
@@ -331,23 +336,31 @@ export function parseClientSearch(query: string): SearchIntent {
 
 // Synonyms searching with spelling tolerance / direct hits
 function findUnitMatch(unitStr: string): { categoryId: string; unitId: string } | null {
-  const norm = unitStr.toLowerCase().trim();
+  // Collapse any stray double-spaces/newlines captured by the regex into single spaces
+  const norm = unitStr.toLowerCase().trim().replace(/\s+/g, " ");
   if (SYNONYMS[norm]) return SYNONYMS[norm];
 
   // Try replacing plural suffix
   const singular = norm.replace(/s$/, "");
   if (SYNONYMS[singular]) return SYNONYMS[singular];
 
-  // Search in categories
+  // Fallback: strip stray punctuation for single-word symbols (e.g. extra periods/spaces)
+  const stripped = normalizeUnitString(norm);
+  if (SYNONYMS[stripped]) return SYNONYMS[stripped];
+
+  // Search directly in the unit data (ids, names, plural names, symbols)
   for (const cat of UNIT_CATEGORIES) {
     for (const unit of cat.units) {
+      const candidates = [
+        unit.id.toLowerCase(),
+        unit.name.toLowerCase(),
+        unit.pluralName.toLowerCase(),
+        unit.symbol.toLowerCase()
+      ];
       if (
-        unit.id.toLowerCase() === norm ||
-        unit.name.toLowerCase() === norm ||
-        unit.pluralName.toLowerCase() === norm ||
-        unit.symbol.toLowerCase() === norm ||
-        unit.name.toLowerCase() === singular ||
-        unit.pluralName.toLowerCase() === singular
+        candidates.includes(norm) ||
+        candidates.includes(singular) ||
+        candidates.includes(stripped)
       ) {
         return { categoryId: cat.id, unitId: unit.id };
       }
