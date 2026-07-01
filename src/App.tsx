@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as Icons from "lucide-react";
 import { UNIT_CATEGORIES } from "./unitsData";
-import { parseClientSearch, getConversionResult, formatValue } from "./unitsEngine";
-import { ConversionResult, HistoryItem, FavoriteItem, SearchIntent } from "./types";
+import { parseClientSearch, getConversionResult } from "./unitsEngine";
 import { getToolBySlug, getAllTools } from "./toolRegistry";
 import { generateSEOData } from "./seoEngine";
 import ResultDetails from "./components/ResultDetails";
@@ -724,4 +723,5 @@ export default function App() {
                     className="flex flex-col justify-between p-3.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200/65 dark:border-slate-800/65 rounded-xl hover:border-brand-500 hover:shadow-xs group transition-all text-left"
                   >
                     <div>
-                      <span className="text-[9px] font-bold text-brand-600 dark:text
+                      <span className="text-[9px] font-bold text-brand-600 dark:text-brand-500 uppercase tracking-wider block">
+                       
