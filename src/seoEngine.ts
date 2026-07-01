@@ -149,16 +149,23 @@ export function generateSEOData(
     jsonLd[0].assesses = tool.formula;
   }
 
-  jsonLd.push({
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: (tool.breadcrumbs || []).map((b, i) => ({
-      "@type": "ListItem",
-      position: i + 1,
-      name: b.label,
-      item: `${hostUrl}${b.url}`
-    }))
-  });
+  // FIXED: Properly structured BreadcrumbList with nested item objects and safety check for empty arrays
+  const breadcrumbs = tool.breadcrumbs || [];
+  if (breadcrumbs.length > 0) {
+    jsonLd.push({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: breadcrumbs.map((b, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: b.label,
+        item: {
+          "@id": `${hostUrl}${b.url}`,
+          name: b.label
+        }
+      }))
+    });
+  }
 
   return {
     title,
