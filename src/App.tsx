@@ -609,10 +609,10 @@ export default function App() {
           {/* Natural Language Search Hub */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-xs">
             <h2 className="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
-              Smart Natural Language Search
+              Quick Search & Tool Launcher
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Type naturally. Instant calculations or local regex parsing will extract the query format.
+              Type a tool name (BMI, Loan, JSON) or unit conversion (e.g., 10kg to lbs).
             </p>
 
             <form onSubmit={handleSearchSubmit} className="mt-4 relative flex items-center">
@@ -633,12 +633,12 @@ export default function App() {
                 {isAiLoading ? (
                   <>
                     <Icons.Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Analyzing...</span>
+                    <span>Searching...</span>
                   </>
                 ) : (
                   <>
                     <Icons.Sparkles className="w-3.5 h-3.5" />
-                    <span>Search</span>
+                    <span>Go</span>
                   </>
                 )}
               </button>
