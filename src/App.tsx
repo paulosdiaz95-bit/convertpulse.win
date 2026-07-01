@@ -17,6 +17,7 @@ import LoanCalculator from "./components/LoanCalculator";
 import PasswordGenerator from "./components/PasswordGenerator";
 import JsonFormatter from "./components/JsonFormatter";
 import CaseConverter from "./components/CaseConverter";
+import { useUserPreferences } from "./useUserPreferences";
 
 export default function App() {
   // Theme state
@@ -40,16 +41,8 @@ export default function App() {
   // Universal Tools Platform Active custom tool (e.g. Percentage Calculator)
   const [activeCustomTool, setActiveCustomTool] = useState<string | null>(null);
 
-  // History and Favorites persisted in localStorage
-  const [history, setHistory] = useState<HistoryItem[]>(() => {
-    const saved = localStorage.getItem("converter_history");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [favorites, setFavorites] = useState<FavoriteItem[]>(() => {
-    const saved = localStorage.getItem("converter_favorites");
-    return saved ? JSON.parse(saved) : [];
-  });
+  // History and Favorites managed by custom hook
+  const { history, favorites, addHistoryItem, toggleFavorite, clearHistory } = useUserPreferences();
 
   // References for keyboard shortcuts
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -65,15 +58,6 @@ export default function App() {
       localStorage.setItem("theme", "light");
     }
   }, [darkMode]);
-
-  // Sync history and favorites with localStorage
-  useEffect(() => {
-    localStorage.setItem("converter_history", JSON.stringify(history));
-  }, [history]);
-
-  useEffect(() => {
-    localStorage.setItem("converter_favorites", JSON.stringify(favorites));
-  }, [favorites]);
 
   // SEO URL routing listener (e.g. /length/cm-to-inch or /percentage-calculator)
   useEffect(() => {
@@ -296,39 +280,9 @@ export default function App() {
     addHistoryItem(activeCategory, toUnitId, temp, inputValue);
   };
 
-  // History record triggers
-  const addHistoryItem = (cat: string, from: string, to: string, val: number) => {
-    if (val === 0 || isNaN(val)) return;
-    const newItem: HistoryItem = {
-      id: Math.random().toString(36).substring(2, 9),
-      timestamp: Date.now(),
-      category: cat,
-      fromUnitId: from,
-      toUnitId: to,
-      value: val
-    };
-
-    setHistory(prev => {
-      // Remove matching duplicate and keep under 20 limit
-      const filtered = prev.filter(item => !(item.fromUnitId === from && item.toUnitId === to && item.value === val));
-      return [newItem, ...filtered].slice(0, 20);
-    });
-  };
-
   // Toggle unit configuration in Favorites list
   const handleToggleFavorite = () => {
-    const isFav = favorites.some(f => f.fromUnitId === fromUnitId && f.toUnitId === toUnitId);
-    if (isFav) {
-      setFavorites(prev => prev.filter(f => !(f.fromUnitId === fromUnitId && f.toUnitId === toUnitId)));
-    } else {
-      const newFav: FavoriteItem = {
-        id: Math.random().toString(36).substring(2, 9),
-        category: activeCategory,
-        fromUnitId,
-        toUnitId
-      };
-      setFavorites(prev => [newFav, ...prev]);
-    }
+    toggleFavorite(activeCategory, fromUnitId, toUnitId);
   };
 
   // Natural Language Search Handling (Local-Only, fully synchronous — no network calls)
@@ -880,7 +834,7 @@ export default function App() {
             }}
             onRemove={(fav, e) => {
               e.stopPropagation();
-              setFavorites(prev => prev.filter(f => f.id !== fav.id));
+              toggleFavorite(fav.category, fav.fromUnitId, fav.toUnitId);
             }}
           />
 
@@ -893,7 +847,7 @@ export default function App() {
               setInputValue(hist.value);
               updateUrlRoute(hist.category, hist.fromUnitId, hist.toUnitId, hist.value);
             }}
-            onClear={() => setHistory([])}
+            onClear={() => clearHistory()}
           />
 
           {/* Clean monetization credit display */}
