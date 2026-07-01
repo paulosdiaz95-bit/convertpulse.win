@@ -1,29 +1,36 @@
-import { useEffect } from "react";
-import { UNIT_CATEGORIES } from "./unitsData";
+import { useEffect, useState } from "react";
+import { generateSEOData, SEOMetadata } from "./seoEngine";
 import { getToolBySlug, getAllTools } from "./toolRegistry";
-import { generateSEOData } from "./seoEngine";
+import { UNIT_CATEGORIES } from "./unitsData";
 
+/**
+ * Custom hook to manage dynamic SEO metadata, meta tags, and JSON-LD structured data.
+ */
 export function useSEO(
-  activeCategory: string,
+  category: string,
   fromUnitId: string,
   toUnitId: string,
   activeCustomTool: string | null,
   inputValue: number
-) {
+): SEOMetadata | null {
+  const [seoData, setSeoData] = useState<SEOMetadata | null>(null);
+
   useEffect(() => {
     let toolObj: any = null;
     
+    // 1. Determine the active tool object
     if (activeCustomTool) {
       toolObj = getToolBySlug(activeCustomTool);
     } else {
-      const slug = `${activeCategory}/${fromUnitId}-to-${toUnitId}`;
+      const slug = `${category}/${fromUnitId}-to-${toUnitId}`;
       toolObj = getToolBySlug(slug);
       
+      // Fallback for category-level routing
       if (!toolObj) {
-        const catObj = UNIT_CATEGORIES.find(c => c.id === activeCategory);
+        const catObj = UNIT_CATEGORIES.find(c => c.id === category);
         toolObj = {
-          id: activeCategory,
-          slug: `?cat=${activeCategory}`,
+          id: category,
+          slug: `?cat=${category}`,
           title: `${catObj?.name || "Unit"} Conversion Calculator`,
           category: "unit-converters",
           categoryLabel: `${catObj?.name || "Unit"} Converters`,
@@ -35,19 +42,24 @@ export function useSEO(
 
     if (!toolObj) return;
 
+    // 2. Generate comprehensive SEO dataset
     const seo = generateSEOData(toolObj, getAllTools(), inputValue);
-    
-    // 1. Update Title
+
+    // 3. Update Document Title
     document.title = seo.title;
 
-    // 2. Helper to set meta tags
+    // 4. Helper to set/update meta tags
     const setMetaTag = (selector: string, attribute: string, value: string) => {
-      let element = document.head.querySelector(selector);
+      let element = document.head.querySelector(selector) as HTMLMetaElement;
       if (!element) {
         const matches = selector.match(/meta\[(name|property)="([^"]+)"/);
         if (matches) {
-          element = document.createElement("meta");
-          element.setAttribute(matches[1], matches[2]);
+          element = document.createElement("meta") as HTMLMetaElement;
+          if (matches[1] === "name") {
+            element.setAttribute("name", matches[2]);
+          } else {
+            element.setAttribute("property", matches[2]);
+          }
           document.head.appendChild(element);
         }
       }
@@ -56,9 +68,9 @@ export function useSEO(
       }
     };
 
-    // 3. Helper to set canonical link
+    // 5. Helper to set/update canonical link
     const setCanonicalLink = (url: string) => {
-      let element = document.head.querySelector("link[rel='canonical']");
+      let element = document.head.querySelector("link[rel='canonical']") as HTMLLinkElement;
       if (!element) {
         element = document.createElement("link");
         element.setAttribute("rel", "canonical");
@@ -67,6 +79,7 @@ export function useSEO(
       element.setAttribute("href", url);
     };
 
+    // Apply standard meta tags
     setMetaTag('meta[name="description"]', 'content', seo.description);
     setCanonicalLink(seo.canonicalUrl);
 
@@ -83,7 +96,7 @@ export function useSEO(
     setMetaTag('meta[name="twitter:description"]', 'content', seo.twitter.description);
     setMetaTag('meta[name="twitter:image"]', 'content', seo.twitter.image);
 
-    // 4. Update JSON-LD Script tag
+    // 6. Inject/Update JSON-LD Script tag for Structured Data
     let ldScript = document.getElementById("jsonld-schema") as HTMLScriptElement;
     if (!ldScript) {
       ldScript = document.createElement("script");
@@ -92,6 +105,11 @@ export function useSEO(
       document.head.appendChild(ldScript);
     }
     ldScript.text = JSON.stringify(seo.jsonLd, null, 2);
-    
-  }, [activeCategory, fromUnitId, toUnitId, activeCustomTool, inputValue]);
+
+    // 7. Expose SEO data to the component for UI rendering (Breadcrumbs, Related Tools)
+    setSeoData(seo);
+
+  }, [category, fromUnitId, toUnitId, activeCustomTool, inputValue]);
+
+  return seoData;
 }
