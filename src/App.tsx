@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as Icons from "lucide-react";
 import { UNIT_CATEGORIES } from "./unitsData";
-import { parseClientSearch, getConversionResult } from "./unitsEngine";
+import { parseClientSearch, getConversionResult, formatValue } from "./unitsEngine";
+import { ConversionResult, HistoryItem, FavoriteItem, SearchIntent } from "./types";
 import { getToolBySlug, getAllTools } from "./toolRegistry";
-import { generateSEOData } from "./seoEngine";
+import { useSEO } from "./useSEO"; // Import the new hook
 import ResultDetails from "./components/ResultDetails";
 import HistoryPanel from "./components/HistoryPanel";
 import FavoritesPanel from "./components/FavoritesPanel";
 import { StickyBottomAd } from "./components/AdPlacements";
 import { motion, AnimatePresence } from "motion/react";
+
 // Interactive custom productivity, finance, health, and developer tools
 import PercentageCalculator from "./components/PercentageCalculator";
 import BmiCalculator from "./components/BmiCalculator";
@@ -17,7 +19,6 @@ import PasswordGenerator from "./components/PasswordGenerator";
 import JsonFormatter from "./components/JsonFormatter";
 import CaseConverter from "./components/CaseConverter";
 import { useUserPreferences } from "./useUserPreferences";
-import { useSEO } from "./useSEO";
 
 export default function App() {
   // Theme state
@@ -37,8 +38,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
-
-  // Universal Tools Platform Active custom tool (e.g. Percentage Calculator)
+  
+  // Universal Tools Platform Active custom tool
   const [activeCustomTool, setActiveCustomTool] = useState<string | null>(null);
 
   // History and Favorites managed by custom hook
@@ -46,17 +47,6 @@ export default function App() {
 
   // References for keyboard shortcuts
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // ========================================
-  // 🚀 SEO Hook - One line to rule them all!
-  // ========================================
-  useSEO({
-    category: activeCategory,
-    fromUnitId: fromUnitId,
-    toUnitId: toUnitId,
-    customToolId: activeCustomTool,
-    inputValue: inputValue,
-  });
 
   // Apply dark mode CSS class
   useEffect(() => {
@@ -70,34 +60,31 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // SEO URL routing listener (e.g. /length/cm-to-inch or /percentage-calculator)
+  // SEO URL routing listener
   useEffect(() => {
     const parseUrlRoute = () => {
       const path = window.location.pathname;
       if (path && path !== "/") {
         const segments = path.split("/").filter(Boolean);
-        // Single segment route (e.g. /percentage-calculator)
+        
         if (segments.length === 1) {
           const toolId = segments[0];
           const isCustomTool = [
-            "percentage-calculator",
-            "bmi-calculator",
-            "loan-calculator",
-            "password-generator",
-            "json-formatter",
-            "case-converter"
+            "percentage-calculator", "bmi-calculator", "loan-calculator", 
+            "password-generator", "json-formatter", "case-converter"
           ].includes(toolId);
+          
           if (isCustomTool) {
             setActiveCustomTool(toolId);
             return;
           }
         }
-
-        // Two segment route (e.g. /length/cm-to-inch)
+        
         if (segments.length === 2) {
           const categoryId = segments[0];
           const unitPair = segments[1];
           const parts = unitPair.split("-to-");
+          
           if (parts.length === 2) {
             const cat = UNIT_CATEGORIES.find(c => c.id === categoryId);
             if (cat) {
@@ -109,7 +96,6 @@ export default function App() {
                 setFromUnitId(fromU.id);
                 setToUnitId(toU.id);
                 
-                // Read optional value from query string
                 const params = new URLSearchParams(window.location.search);
                 const queryVal = params.get("v");
                 if (queryVal) {
@@ -121,7 +107,6 @@ export default function App() {
           }
         }
       } else {
-        // Root path
         setActiveCustomTool(null);
       }
     };
@@ -131,11 +116,18 @@ export default function App() {
     return () => window.removeEventListener("popstate", parseUrlRoute);
   }, []);
 
-  // Helper to trigger URL updates to keep SEO page-depth and shareability intact
+  // Helper to trigger URL updates
   const updateUrlRoute = (catId: string, fromId: string, toId: string, value: number) => {
     const newPath = `/${catId}/${fromId}-to-${toId}${value !== 1 ? `?v=${value}` : ""}`;
     window.history.pushState({ path: newPath }, "", newPath);
   };
+
+  // ==========================================
+  // CLEAN SEO IMPLEMENTATION (ONE-LINER)
+  // ==========================================
+  const seoData = useSEO(activeCategory, fromUnitId, toUnitId, activeCustomTool, inputValue);
+  const activeBreadcrumbs = seoData ? seoData.breadcrumbs : [{ label: "Home", url: "/" }];
+  // ==========================================
 
   // Keyboard shortcut for Command+K or Search key focus
   useEffect(() => {
@@ -145,7 +137,6 @@ export default function App() {
         searchInputRef.current?.focus();
       }
       if (e.key === "/") {
-        // Focus search if not inside an input
         if (document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
           e.preventDefault();
           searchInputRef.current?.focus();
@@ -156,7 +147,7 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Update URL whenever standard selects change
+  // Handlers
   const handleSelectCategory = (catId: string) => {
     const cat = UNIT_CATEGORIES.find(c => c.id === catId);
     if (cat) {
@@ -192,7 +183,6 @@ export default function App() {
     updateUrlRoute(activeCategory, fromUnitId, toUnitId, val);
   };
 
-  // Perform Swap Conversion action
   const handleSwap = () => {
     const temp = fromUnitId;
     setFromUnitId(toUnitId);
@@ -201,23 +191,19 @@ export default function App() {
     addHistoryItem(activeCategory, toUnitId, temp, inputValue);
   };
 
-  // Toggle unit configuration in Favorites list
   const handleToggleFavorite = () => {
     toggleFavorite(activeCategory, fromUnitId, toUnitId);
   };
 
-  // Natural Language Search Handling (Local-Only, fully synchronous — no network calls)
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmedQuery = searchQuery.trim();
     if (!trimmedQuery) return;
-
+    
     setIsAiLoading(true);
     setSearchError("");
-
     const lowerQuery = trimmedQuery.toLowerCase();
 
-    // 1. Check for custom tool keywords first — if matched, jump straight there and stop.
     const toolMatch =
       lowerQuery.includes("bmi") ? "bmi-calculator" :
       lowerQuery.includes("percent") ? "percentage-calculator" :
@@ -233,7 +219,6 @@ export default function App() {
       return;
     }
 
-    // 2. Otherwise, try to parse it as a unit conversion query locally.
     const clientIntent = parseClientSearch(trimmedQuery);
     if (clientIntent.categoryId && clientIntent.fromUnitId && clientIntent.toUnitId) {
       setActiveCustomTool(null);
@@ -248,36 +233,13 @@ export default function App() {
       updateUrlRoute(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, resolvedValue);
       addHistoryItem(clientIntent.categoryId, clientIntent.fromUnitId, clientIntent.toUnitId, resolvedValue);
     } else {
-      // 3. No match — surface a subtle inline notice instead of a blocking alert().
-      console.warn(`Search: no conversion match found for "${trimmedQuery}"`);
       setSearchError(`Couldn't find a match for "${trimmedQuery}". Try something like "10kg to lbs" or "5 feet to cm".`);
     }
-
     setIsAiLoading(false);
   };
 
-  // Get current active conversion objects
   const activeCategoryObj = UNIT_CATEGORIES.find(c => c.id === activeCategory) || UNIT_CATEGORIES[0];
   const conversionResult = getConversionResult(activeCategory, fromUnitId, toUnitId, inputValue);
-
-  // Configuration-driven SEO and Breadcrumbs selector
-  const activeToolObj = activeCustomTool
-    ? getToolBySlug(activeCustomTool)
-    : (getToolBySlug(`${activeCategory}/${fromUnitId}-to-${toUnitId}`) || {
-        id: activeCategory,
-        slug: `?cat=${activeCategory}`,
-        title: `${activeCategoryObj.name} Conversion Calculator`,
-        category: "unit-converters" as const,
-        categoryLabel: `${activeCategoryObj.name} Converters`,
-        description: `Convert ${activeCategoryObj.name} units dynamically.`,
-        breadcrumbs: [
-          { label: "Home", url: "/" },
-          { label: activeCategoryObj.name, url: `/?cat=${activeCategory}` }
-        ]
-      });
-
-  const seoData = activeToolObj ? generateSEOData(activeToolObj, getAllTools(), inputValue) : null;
-  const activeBreadcrumbs = seoData ? seoData.breadcrumbs : [{ label: "Home", url: "/" }];
 
   return (
     <div className={`min-h-screen ${darkMode ? "dark" : ""} bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300`}>
@@ -304,7 +266,6 @@ export default function App() {
               <span>Press / to Search</span>
             </span>
 
-            {/* Dark Mode Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-lg text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all cursor-pointer"
@@ -347,7 +308,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Calculators & Security section */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-xl p-4 shadow-xs">
             <h3 className="text-[10px] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-3 px-1">
               Calculators & Security
@@ -380,7 +340,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Quick links to top index routes */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-xl p-4 shadow-xs">
             <h3 className="text-[10px] font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase mb-3 px-1">
               Popular Landing Pages
@@ -415,7 +374,6 @@ export default function App() {
         {/* Center: Search + Converter core + Results */}
         <section className="lg:col-span-6 space-y-6">
           
-          {/* Clickable Breadcrumbs Trail */}
           <nav aria-label="Breadcrumb" id="breadcrumb-navigation" className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 px-4 py-2.5 rounded-xl shadow-xs">
             {activeBreadcrumbs.map((crumb, idx) => (
               <React.Fragment key={idx}>
@@ -446,12 +404,10 @@ export default function App() {
                         setActiveCategory(cat);
                         window.history.pushState({}, "", "/");
                       } else {
-                        // Direct tool slug link
                         const cleanedSlug = crumb.url.replace(/^\//, "");
                         const tool = getToolBySlug(cleanedSlug);
                         if (tool) {
                           if (tool.category === "unit-converters") {
-                            // Pairwise converter
                             setActiveCustomTool(null);
                             const pathParts = tool.id.split("-to-");
                             if (pathParts.length === 2) {
@@ -477,7 +433,6 @@ export default function App() {
             ))}
           </nav>
           
-          {/* SEO H1 Page Header block */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-xs">
             <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
               {activeCustomTool 
@@ -491,7 +446,6 @@ export default function App() {
             </p>
           </div>
 
-          {/* Natural Language Search Hub */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-xs">
             <h2 className="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
               Quick Search & Tool Launcher
@@ -539,7 +493,6 @@ export default function App() {
               </p>
             )}
 
-            {/* Quick pre-populate tags */}
             <div className="flex flex-wrap gap-1.5 mt-3">
               {[
                 "5 feet to cm",
@@ -551,7 +504,6 @@ export default function App() {
                   key={example}
                   onClick={() => {
                     setSearchQuery(example);
-                    // trigger search with example query
                     const clientIntent = parseClientSearch(example);
                     if (clientIntent.categoryId && clientIntent.fromUnitId && clientIntent.toUnitId) {
                       setActiveCategory(clientIntent.categoryId);
@@ -592,7 +544,6 @@ export default function App() {
             </div>
           ) : (
             <>
-              {/* Interactive Calculator Block */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-6 shadow-xs space-y-4">
                 <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -604,8 +555,6 @@ export default function App() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  
-                  {/* From Block */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
                       From Unit
@@ -634,7 +583,6 @@ export default function App() {
                     />
                   </div>
 
-                  {/* To Block */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
                       To Unit
@@ -654,11 +602,9 @@ export default function App() {
                       <Icons.ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>
                   </div>
-
                 </div>
               </div>
 
-              {/* 3. conversion details cards container */}
               {conversionResult && (
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -678,7 +624,7 @@ export default function App() {
                         addHistoryItem(activeCategory, fromId, toId, inputValue);
                       }}
                       favorites={favorites}
-                      onToggleFavorite={handleToggleFavorite} 
+                      onToggleFavorite={handleToggleFavorite}  
                     />
                   </motion.div>
                 </AnimatePresence>
@@ -686,7 +632,6 @@ export default function App() {
             </>
           )}
 
-          {/* Dynamically Generated Internal Links / Related Tools */}
           {seoData && seoData.relatedTools && seoData.relatedTools.length > 0 && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-xs">
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
@@ -724,4 +669,93 @@ export default function App() {
                   >
                     <div>
                       <span className="text-[9px] font-bold text-brand-600 dark:text-brand-500 uppercase tracking-wider block">
-                       
+                        {relTool.category.replace("-", " ")}
+                      </span>
+                      <strong className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1 block group-hover:text-brand-600 dark:group-hover:text-brand-400 line-clamp-2 leading-snug">
+                        {relTool.title}
+                      </strong>
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-400 group-hover:text-brand-600 flex items-center gap-0.5 mt-3 transition-colors">
+                      <span>Launch Tool</span>
+                      <Icons.ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Right Hand: Favorites, Recent History Panel */}
+        <aside className="lg:col-span-3 space-y-6">
+          <FavoritesPanel
+            favorites={favorites}
+            onSelect={(fav) => {
+              setActiveCategory(fav.category);
+              setFromUnitId(fav.fromUnitId);
+              setToUnitId(fav.toUnitId);
+              updateUrlRoute(fav.category, fav.fromUnitId, fav.toUnitId, inputValue);
+              addHistoryItem(fav.category, fav.fromUnitId, fav.toUnitId, inputValue);
+            }}
+            onRemove={(fav, e) => {
+              e.stopPropagation();
+              toggleFavorite(fav.category, fav.fromUnitId, fav.toUnitId);
+            }}
+          />
+
+          <HistoryPanel
+            history={history}
+            onSelect={(hist) => {
+              setActiveCategory(hist.category);
+              setFromUnitId(hist.fromUnitId);
+              setToUnitId(hist.toUnitId);
+              setInputValue(hist.value);
+              updateUrlRoute(hist.category, hist.fromUnitId, hist.toUnitId, hist.value);
+            }}
+            onClear={() => clearHistory()}
+          />
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-xl p-4 shadow-xs text-center">
+            <span className="text-[9px] font-mono tracking-widest text-slate-400 uppercase">Secure Client Engine</span>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Your calculations are secure. No cookies, cloud storage trackers, or sign-in walls exist. Privacy first.
+            </p>
+          </div>
+        </aside>
+      </main>
+
+      {/* 3. Footer Section */}
+      <footer className="border-t border-slate-200/55 dark:border-slate-800/60 bg-white dark:bg-slate-950 py-12 mt-16 text-slate-400">
+        <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Universal Converter</h4>
+            <p className="text-[11px] mt-2 leading-relaxed text-slate-400">
+              The premier resource for scientific, financial, physical, and custom dimensional measurement standardizations. Built with speed, offline compliance, and user safety in mind.
+            </p>
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Supported Standards</h4>
+            <p className="text-[11px] mt-2 leading-relaxed text-slate-400">
+              Governed by the International System of Units (SI), NIST standard reference indexes, and modern European Forex indices.
+            </p>
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Future Roadmap</h4>
+            <p className="text-[11px] mt-2 leading-relaxed text-slate-400">
+              Future releases include offline progressive web apps (PWA), OCR image scanning, voice searching, and multi-language support.
+            </p>
+          </div>
+        </div>
+        <div className="max-w-6xl mx-auto px-4 border-t border-slate-200/40 dark:border-slate-800/40 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px]">
+          <div>&copy; 2026 Universal Unit Converter. All Rights Reserved.</div>
+          <div className="flex gap-4">
+            <span className="cursor-pointer hover:underline">Privacy Policy</span>
+            <span className="cursor-pointer hover:underline">Terms of Service</span>
+            <span className="cursor-pointer hover:underline">Reference Index</span>
+          </div>
+        </div>
+      </footer>
+      <StickyBottomAd />
+    </div>
+  );
+}
